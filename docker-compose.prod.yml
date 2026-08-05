@@ -1,0 +1,25 @@
+# Override de producción para despliegue en una sola máquina EC2.
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Antes de levantar, reemplazá:
+#   - CAMBIA_ESTA_CLAVE  → una contraseña fuerte para PostgreSQL (en 2 lugares)
+#   - <TU_ELASTIC_IP>    → la IP pública o dominio del servidor
+#
+# Ver docs/DEPLOY_EC2.md para la guía completa.
+
+services:
+  db:
+    environment:
+      POSTGRES_PASSWORD: sisa_clv_2026**
+    ports: []
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://sisa:sisa_clv_2026**@db:5432/sisa_compras
+      CORS_ORIGINS: http://3.15.55.23
+    ports: []
+
+  frontend:
+    ports:
+      - "80:80"

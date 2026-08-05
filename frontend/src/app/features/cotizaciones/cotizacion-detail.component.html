@@ -1,0 +1,420 @@
+<!-- content-header -->
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Cotización #{{ cotizacion?.id ?? '...' }}</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/cotizaciones']">Cotizaciones</a></li>
+          <li class="breadcrumb-item active">#{{ cotizacion?.id ?? '...' }}</li>
+          @if (cotizacion?.id) {
+            <li class="breadcrumb-item">
+              <a [routerLink]="['/cotizaciones', cotizacion!.id, 'versiones']" class="text-info">
+                <i class="fas fa-history mr-1"></i>Historial
+              </a>
+            </li>
+          }
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    @if (mensaje) {
+      <div class="alert alert-success">
+        <i class="fas fa-check mr-2"></i>{{ mensaje }}
+      </div>
+    }
+
+    @if (cargando) {
+      <div class="d-flex justify-content-center py-5">
+        <dx-load-indicator [visible]="true"></dx-load-indicator>
+      </div>
+    }
+
+    @if (!cargando && cotizacion) {
+
+      <!-- Info general -->
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1">Información general</h3>
+          <span class="badge" [ngClass]="getEstadoBadgeClass(cotizacion.estado)">
+            {{ cotizacion.estado }}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <dl class="row mb-0">
+                <dt class="col-sm-4">Oportunidad</dt>
+                <dd class="col-sm-8">
+                  <a [routerLink]="['/solicitudes', cotizacion.solicitud_id]">
+                    {{ cotizacion.solicitud?.titulo ?? ('Oportunidad #' + cotizacion.solicitud_id) }}
+                  </a>
+                </dd>
+                <dt class="col-sm-4">Solicitante</dt>
+                <dd class="col-sm-8">{{ cotizacion.solicitud?.solicitante_nombre ?? '—' }}</dd>
+              </dl>
+            </div>
+            <div class="col-md-6">
+              <dl class="row mb-0">
+                <dt class="col-sm-4">Proveedor</dt>
+                <dd class="col-sm-8">{{ cotizacion.proveedor?.razon_social ?? '—' }}</dd>
+                <dt class="col-sm-4">Fecha requerida</dt>
+                <dd class="col-sm-8">
+                  {{ cotizacion.solicitud?.fecha_requerida ? (cotizacion.solicitud?.fecha_requerida | date:'dd/MM/yyyy') : '—' }}
+                </dd>
+                <dt class="col-sm-4">Límite de respuesta</dt>
+                <dd class="col-sm-8">
+                  {{ cotizacion.fecha_limite_respuesta ? (cotizacion.fecha_limite_respuesta | date:'dd/MM/yyyy') : 'Sin definir' }}
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de ítems cotizados -->
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1">Ítems cotizados</h3>
+          @if (!modoEdicion && cotizacion.estado !== 'descartada') {
+            <button class="btn btn-primary btn-sm" (click)="activarEdicion()">
+              <i class="fas fa-edit mr-1"></i>Editar respuesta
+            </button>
+          }
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>Descripción</th>
+                  <th>Tipo</th>
+                  <th class="text-right">Cantidad</th>
+                  <th class="text-right">Precio unit.</th>
+                  <th class="text-center">Disponible</th>
+                  <th class="text-right">Días entrega</th>
+                  <th class="text-right">Subtotal</th>
+                  <th>Notas</th>
+                  <th class="text-center specs-toggle-column">
+                    <span class="sr-only">Especificaciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of cotizacion.items; track item.id; let i = $index) {
+                  <tr
+                    class="item-quote-row"
+                    [class.table-danger]="modoEdicion ? !itemsForm[i].disponible : !item.disponible"
+                    [class.item-expanded]="estaExpandido(item.id)"
+                  >
+                    <td>{{ item.item_solicitud?.descripcion ?? '—' }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="getTipoBadgeClass(item.item_solicitud?.tipo ?? '')">
+                        {{ item.item_solicitud?.tipo ?? '—' }}
+                      </span>
+                    </td>
+                    <td class="text-right">{{ item.item_solicitud?.cantidad ?? '—' }}</td>
+
+                    <!-- Precio unitario -->
+                    <td class="text-right" style="min-width:130px;">
+                      @if (modoEdicion) {
+                        <dx-number-box
+                          [value]="$any(itemsForm[i].precio_unitario)"
+                          (valueChange)="itemsForm[i].precio_unitario = $event"
+                          [min]="0"
+                          format="#,##0.00"
+                          [width]="'100%'"
+                        ></dx-number-box>
+                      } @else {
+                        {{ item.precio_unitario != null ? (item.precio_unitario | number:'1.2-2') : '—' }}
+                      }
+                    </td>
+
+                    <!-- Disponible -->
+                    <td class="text-center">
+                      @if (modoEdicion) {
+                        <dx-check-box
+                          [value]="itemsForm[i].disponible ?? true"
+                          (valueChange)="itemsForm[i].disponible = !!$event"
+                        ></dx-check-box>
+                      } @else {
+                        @if (item.disponible) {
+                          <i class="fas fa-check text-success"></i>
+                        } @else {
+                          <i class="fas fa-times text-danger"></i>
+                        }
+                      }
+                    </td>
+
+                    <!-- Días entrega -->
+                    <td class="text-right" style="min-width:110px;">
+                      @if (modoEdicion) {
+                        <dx-number-box
+                          [value]="$any(itemsForm[i].tiempo_entrega_dias)"
+                          (valueChange)="itemsForm[i].tiempo_entrega_dias = $event"
+                          [min]="0"
+                          [width]="'100%'"
+                        ></dx-number-box>
+                      } @else {
+                        {{ item.tiempo_entrega_dias != null ? item.tiempo_entrega_dias + ' d' : '—' }}
+                      }
+                    </td>
+
+                    <!-- Subtotal -->
+                    <td class="text-right font-weight-bold">
+                      {{ getSubtotal(i) | number:'1.2-2' }}
+                    </td>
+
+                    <!-- Notas del ítem -->
+                    <td style="min-width:160px;">
+                      @if (modoEdicion) {
+                        <input
+                          type="text"
+                          class="form-control form-control-sm"
+                          [value]="itemsForm[i].notas ?? ''"
+                          (input)="itemsForm[i].notas = $any($event.target).value"
+                          placeholder="Notas..."
+                        />
+                      } @else {
+                        {{ item.notas ?? '—' }}
+                      }
+                    </td>
+
+                    <td class="text-center specs-toggle-column">
+                      @if (tieneEspecificaciones(item.id)) {
+                        <button
+                          type="button"
+                          class="specs-toggle"
+                          [class.expanded]="estaExpandido(item.id)"
+                          [attr.aria-expanded]="estaExpandido(item.id)"
+                          [attr.aria-controls]="'specs-' + item.id"
+                          [title]="estaExpandido(item.id) ? 'Ocultar especificaciones' : 'Ver especificaciones'"
+                          (click)="alternarEspecificaciones(item.id)"
+                        >
+                          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                          <span class="sr-only">
+                            {{ estaExpandido(item.id) ? 'Ocultar' : 'Ver' }} especificaciones de
+                            {{ item.item_solicitud?.descripcion }}
+                          </span>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+
+                  @if (tieneEspecificaciones(item.id) && estaExpandido(item.id)) {
+                    <tr class="specs-detail-row" [id]="'specs-' + item.id">
+                      <td colspan="9">
+                        <div class="specs-detail">
+                          <div class="specs-detail-heading">
+                            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                            <div>
+                              <strong>Especificaciones solicitadas</strong>
+                              <span>{{ item.item_solicitud?.descripcion }}</span>
+                            </div>
+                          </div>
+                          <dl class="specs-grid">
+                            @for (spec of especificacionesPorItem[item.id]; track $index) {
+                              <div class="spec-field">
+                                <dt>
+                                  <span>{{ spec.nombre }}</span>
+                                  @if (spec.tipoDato) {
+                                    <span class="spec-kind">{{ spec.tipoDato }}</span>
+                                  }
+                                </dt>
+                                <dd>
+                                  {{ spec.valor }}
+                                </dd>
+                                @if (spec.cantidad || spec.unidad) {
+                                  <div class="spec-meta">
+                                    @if (spec.cantidad) {
+                                      <span>Cantidad: <strong>{{ spec.cantidad }}</strong></span>
+                                    }
+                                    @if (spec.unidad) {
+                                      <span>Unidad: <strong>{{ spec.unidad }}</strong></span>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </dl>
+                          @if (item.item_solicitud?.notas) {
+                            <p class="specs-analyst-note">
+                              <strong>Nota del analista:</strong> {{ item.item_solicitud?.notas }}
+                            </p>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+                @empty {
+                  <tr><td colspan="9" class="text-center text-muted py-3">Sin ítems</td></tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="font-weight-bold bg-light">
+                  <td colspan="6" class="text-right">TOTAL ESTIMADO:</td>
+                  <td class="text-right">
+                    {{ (modoEdicion ? getTotalForm() : getTotalEstimado()) | number:'1.2-2' }}
+                  </td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Especificaciones dinámicas por categoría (modo edición) -->
+      @if (modoEdicion && camposDinamicos.length > 0) {
+        <div class="card card-outline card-secondary mt-3 mb-3">
+          <div class="card-header">
+            <h3 class="card-title">Especificaciones de {{ categoriaSeleccionada?.nombre }}</h3>
+          </div>
+          <div class="card-body">
+            @for (campo of camposDinamicos; track campo.id) {
+              <div class="form-group">
+                <label>
+                  {{ campo.nombre }}
+                  @if (campo.es_obligatorio) {
+                    <span class="text-danger">*</span>
+                  }
+                </label>
+
+                <!-- TIPO: TEXTO -->
+                @if (campo.tipo_dato === 'texto') {
+                  @if (campo.tiene_unidad) {
+                    <div style="display:flex;gap:8px">
+                      <dx-text-box
+                        [value]="valoresEspecificacion[campo.clave] || ''"
+                        (valueChange)="valoresEspecificacion[campo.clave] = $event"
+                        [placeholder]="campo.placeholder"
+                        style="flex:1"
+                      ></dx-text-box>
+                      <dx-select-box
+                        [items]="campo.opciones_unidad"
+                        displayExpr="simbolo"
+                        valueExpr="id"
+                        [(value)]="valoresEspecificacion[campo.clave + '_unidad']"
+                        style="width:120px"
+                      ></dx-select-box>
+                    </div>
+                  } @else {
+                    <dx-text-box
+                      [value]="valoresEspecificacion[campo.clave] || ''"
+                      (valueChange)="valoresEspecificacion[campo.clave] = $event"
+                      [placeholder]="campo.placeholder"
+                    ></dx-text-box>
+                  }
+                }
+
+                <!-- TIPO: NUMERO -->
+                @if (campo.tipo_dato === 'numero') {
+                  @if (campo.tiene_unidad) {
+                    <div style="display:flex;gap:8px">
+                      <dx-number-box
+                        [value]="$any(valoresEspecificacion[campo.clave])"
+                        (valueChange)="valoresEspecificacion[campo.clave] = $event"
+                        [min]="0"
+                        [placeholder]="campo.placeholder"
+                        style="flex:1"
+                      ></dx-number-box>
+                      <dx-select-box
+                        [items]="campo.opciones_unidad"
+                        displayExpr="simbolo"
+                        valueExpr="id"
+                        [(value)]="valoresEspecificacion[campo.clave + '_unidad']"
+                        style="width:120px"
+                      ></dx-select-box>
+                    </div>
+                  } @else {
+                    <dx-number-box
+                      [value]="$any(valoresEspecificacion[campo.clave])"
+                      (valueChange)="valoresEspecificacion[campo.clave] = $event"
+                      [min]="0"
+                      [placeholder]="campo.placeholder"
+                    ></dx-number-box>
+                  }
+                }
+
+                <!-- Hint -->
+                @if (campo.descripcion_ayuda) {
+                  <small class="form-text text-muted d-block mt-1">{{ campo.descripcion_ayuda }}</small>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Notas del proveedor -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Notas del proveedor</h3>
+        </div>
+        <div class="card-body">
+          @if (modoEdicion) {
+            <dx-text-area
+              [value]="notas_proveedor"
+              (valueChange)="notas_proveedor = $event"
+              [height]="100"
+              placeholder="Notas o comentarios del proveedor sobre esta cotización..."
+            ></dx-text-area>
+          } @else {
+            <p class="mb-0">{{ cotizacion.notas_proveedor ?? 'Sin notas.' }}</p>
+          }
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="d-flex gap-2 mb-4">
+        @if (modoEdicion) {
+          <dx-button
+            text="Guardar respuesta"
+            type="success"
+            icon="save"
+            [disabled]="guardando"
+            (onClick)="guardar()"
+          ></dx-button>
+          <dx-button
+            text="Cancelar"
+            type="normal"
+            (onClick)="cancelarEdicion()"
+          ></dx-button>
+        }
+
+        @if (!modoEdicion && cotizacion.estado !== 'descartada') {
+          <dx-button
+            text="Descartar cotización"
+            type="danger"
+            icon="trash"
+            (onClick)="descartar()"
+          ></dx-button>
+        }
+
+        <a [routerLink]="['/cotizaciones/comparativo', cotizacion.solicitud_id]"
+           class="btn btn-outline-info">
+          <i class="fas fa-balance-scale mr-1"></i>Ver comparativo
+        </a>
+      </div>
+
+    }
+
+  </div>
+</div>

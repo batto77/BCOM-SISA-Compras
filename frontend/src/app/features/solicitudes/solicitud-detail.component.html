@@ -1,0 +1,355 @@
+<!-- content-header -->
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">{{ solicitud?.titulo ?? 'Oportunidad' }}</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/solicitudes']">Oportunidades</a></li>
+          <li class="breadcrumb-item active">{{ solicitud?.titulo ?? '...' }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    @if (cargando) {
+      <div class="d-flex justify-content-center py-5">
+        <dx-load-indicator [visible]="true"></dx-load-indicator>
+      </div>
+    }
+
+    @if (!cargando && solicitud) {
+
+      <!-- Timeline de estado -->
+      <div class="card card-outline card-primary mb-3">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            @for (paso of [
+              { num: 1, label: 'Borrador', icon: 'fa-file-alt' },
+              { num: 2, label: 'Enviada', icon: 'fa-paper-plane' },
+              { num: 3, label: 'En Cotización', icon: 'fa-tags' },
+              { num: 4, label: 'Aprobada / Rechazada', icon: 'fa-check-circle' }
+            ]; track paso.num) {
+              <div class="text-center" style="flex: 1; min-width: 100px;">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-1"
+                     style="width:40px;height:40px;"
+                     [class.bg-primary]="pasoActual >= paso.num"
+                     [class.bg-light]="pasoActual < paso.num"
+                     [class.text-white]="pasoActual >= paso.num"
+                     [class.text-muted]="pasoActual < paso.num">
+                  <i class="fas {{ paso.icon }}"></i>
+                </div>
+                <div class="small" [class.font-weight-bold]="pasoActual === paso.num">{{ paso.label }}</div>
+              </div>
+              @if (paso.num < 4) {
+                <div class="flex-grow-0" style="height:2px;width:30px;background:#dee2e6;margin-bottom:20px;"></div>
+              }
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Encabezado de la oportunidad -->
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1">Datos de la oportunidad</h3>
+          <a
+            class="btn btn-sm btn-primary mr-2"
+            [routerLink]="['/cotizaciones/asistente', solicitud.id]"
+          >
+            <i class="fas fa-edit mr-1"></i>Editar RFQ
+          </a>
+          <span class="badge mr-2" [ngClass]="getPrioridadBadgeClass(solicitud.prioridad)">
+            Prioridad: {{ solicitud.prioridad }}
+          </span>
+          <span class="badge badge-primary mr-2">RFQ v{{ solicitud.version_actual || 1 }}</span>
+          <span class="badge badge-info">{{ solicitud.estado | titlecase }}</span>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <dl class="row mb-0">
+                <dt class="col-sm-4">Solicitante</dt>
+                <dd class="col-sm-8">{{ solicitud.solicitante_nombre }}</dd>
+                <dt class="col-sm-4">Aprobador</dt>
+                <dd class="col-sm-8">{{ solicitud.aprobador ?? '—' }}</dd>
+                <dt class="col-sm-4">Rubro</dt>
+                <dd class="col-sm-8">
+                  @for (rubro of solicitud.rubros; track rubro.id) {
+                    <span class="badge badge-light border mr-1">{{ rubro.nombre }}</span>
+                  } @empty {
+                    {{ solicitud.rubro?.nombre ?? '—' }}
+                  }
+                </dd>
+                <dt class="col-sm-4">Fecha requerida</dt>
+                <dd class="col-sm-8">{{ solicitud.fecha_requerida ?? '—' }}</dd>
+              </dl>
+            </div>
+            <div class="col-md-6">
+              <dl class="row mb-0">
+                <dt class="col-sm-4">Descripción</dt>
+                <dd class="col-sm-8">{{ solicitud.descripcion ?? '—' }}</dd>
+                <dt class="col-sm-4">Notas</dt>
+                <dd class="col-sm-8">{{ solicitud.notas ?? '—' }}</dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de ítems -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Ítems de la oportunidad ({{ solicitud.items.length }})</h3>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>#</th>
+                  <th>Tipo</th>
+                  <th>Descripción y especificaciones</th>
+                  <th class="text-right">Cantidad</th>
+                  <th>Unidad</th>
+                  <th class="text-right">Presupuesto est.</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of solicitud.items; track item.id) {
+                  <tr
+                    class="item-quote-row"
+                    [class.item-expanded]="estaExpandido(item.id)"
+                  >
+                    <td>{{ $index + 1 }}</td>
+                    <td>
+                      <span class="badge" [ngClass]="getTipoBadgeClass(item.tipo)">{{ item.tipo }}</span>
+                    </td>
+                    <td>
+                      <strong>{{ item.descripcion }}</strong>
+                      @if (tieneEspecificaciones(item.id)) {
+                        <button
+                          type="button"
+                          class="specs-toggle specs-toggle-inline"
+                          [class.expanded]="estaExpandido(item.id)"
+                          [attr.aria-expanded]="estaExpandido(item.id)"
+                          [attr.aria-controls]="'opportunity-specs-' + item.id"
+                          (click)="alternarEspecificaciones(item.id)"
+                        >
+                          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                          <span class="specs-toggle-label">Especificaciones</span>
+                        </button>
+                      }
+                    </td>
+                    <td class="text-right">{{ item.cantidad ?? '—' }}</td>
+                    <td>{{ item.unidad?.simbolo ?? item.unidad?.nombre ?? '—' }}</td>
+                    <td class="text-right">
+                      {{ item.presupuesto_estimado != null
+                          ? (item.presupuesto_estimado | number:'1.2-2')
+                          : '—' }}
+                    </td>
+                  </tr>
+                  @if (tieneEspecificaciones(item.id) && estaExpandido(item.id)) {
+                    <tr class="specs-detail-row" [id]="'opportunity-specs-' + item.id">
+                      <td colspan="6">
+                        <div class="specs-detail">
+                          <div class="specs-detail-heading">
+                            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                            <div>
+                              <strong>Especificaciones solicitadas</strong>
+                              <span>{{ item.descripcion }}</span>
+                            </div>
+                          </div>
+                          <dl class="specs-grid">
+                            @for (spec of especificacionesPorItem[item.id]; track $index) {
+                              <div class="spec-field">
+                                <dt>
+                                  <span>{{ spec.nombre }}</span>
+                                  @if (spec.tipoDato) {
+                                    <span class="spec-kind">{{ spec.tipoDato }}</span>
+                                  }
+                                </dt>
+                                <dd>{{ spec.valor }}</dd>
+                                @if (spec.cantidad || spec.unidad) {
+                                  <div class="spec-meta">
+                                    @if (spec.cantidad) {
+                                      <span>Cantidad: <strong>{{ spec.cantidad }}</strong></span>
+                                    }
+                                    @if (spec.unidad) {
+                                      <span>Unidad: <strong>{{ spec.unidad }}</strong></span>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </dl>
+                          @if (item.notas) {
+                            <p class="specs-analyst-note">
+                              <strong>Nota del analista:</strong> {{ item.notas }}
+                            </p>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+                @empty {
+                  <tr><td colspan="6" class="text-center text-muted py-3">Sin ítems</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proveedores invitados -->
+      <div class="card mb-3">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1">
+            Proveedores invitados ({{ cotizaciones.length }})
+          </h3>
+
+          @if (solicitud.estado === 'borrador' || solicitud.estado === 'enviada') {
+            <button class="btn btn-primary btn-sm" (click)="abrirEnviarRFQ()">
+              <i class="fas fa-paper-plane mr-1"></i>Enviar a proveedores
+            </button>
+          }
+
+        </div>
+        <div class="card-body p-0">
+          @if (cotizaciones.length === 0) {
+            <div class="p-3 text-muted text-center">
+              <i class="fas fa-info-circle mr-1"></i>Aún no hay proveedores invitados.
+            </div>
+          } @else {
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>País</th>
+                    <th>Estado</th>
+                    <th>Versión</th>
+                    <th>Fecha límite</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (cot of cotizaciones; track cot.id) {
+                    <tr>
+                      <td>{{ cot.proveedor?.razon_social ?? '—' }}</td>
+                      <td>{{ cot.proveedor?.pais ?? '—' }}</td>
+                      <td>
+                        <span class="badge" [ngClass]="getCotizacionEstadoBadge(cot.estado)">
+                          {{ cot.estado }}
+                        </span>
+                      </td>
+                      <td><span class="badge badge-light border">v{{ cot.version_actual || 1 }}</span></td>
+                      <td>{{ cot.fecha_limite_respuesta ?? '—' }}</td>
+                      <td>
+                        <a [routerLink]="['/cotizaciones', cot.id]"
+                           class="btn btn-xs btn-outline-primary"
+                           title="Ver cotización">
+                          <i class="fas fa-eye"></i>
+                        </a>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+
+    }
+
+  </div>
+</div>
+
+<!-- Popup: Enviar RFQ -->
+<dx-popup
+  [visible]="popupEnviarVisible"
+  (visibleChange)="popupEnviarVisible = $event"
+  title="Enviar oportunidad a proveedores (RFQ)"
+  [width]="600"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  [dragEnabled]="false"
+  [resizeEnabled]="false"
+>
+  <div *dxTemplate="let data of 'content'">
+    <div class="mb-3">
+      <label class="font-weight-bold mb-1">Seleccionar proveedores <span class="text-danger">*</span></label>
+      <dx-tag-box
+        [dataSource]="proveedoresDisponibles"
+        displayExpr="razon_social"
+        valueExpr="id"
+        [searchEnabled]="true"
+        [value]="proveedoresSeleccionados"
+        (valueChange)="proveedoresSeleccionados = $event"
+        placeholder="Buscar y seleccionar proveedores..."
+      ></dx-tag-box>
+    </div>
+
+    <div class="mb-3">
+      <label class="font-weight-bold mb-1">Fecha límite de respuesta</label>
+      <dx-date-box
+        [value]="$any(fechaLimiteRFQ)"
+        (valueChange)="onFechaLimiteChange($any($event))"
+        type="date"
+        displayFormat="dd/MM/yyyy"
+        [width]="'100%'"
+        placeholder="Seleccionar fecha..."
+      ></dx-date-box>
+    </div>
+
+    <div class="mb-3">
+      <label class="font-weight-bold mb-1">Notas internas</label>
+      <dx-text-area
+        [value]="notasRFQ"
+        (valueChange)="notasRFQ = $event"
+        [height]="90"
+        placeholder="Notas o instrucciones para el equipo..."
+      ></dx-text-area>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+      <dx-button
+        text="Cancelar"
+        type="normal"
+        (onClick)="popupEnviarVisible = false"
+      ></dx-button>
+      <dx-button
+        text="Enviar RFQ"
+        type="success"
+        icon="email"
+        [disabled]="proveedoresSeleccionados.length === 0 || enviando"
+        (onClick)="enviarRFQ()"
+      ></dx-button>
+    </div>
+  </div>
+</dx-popup>
+
+<!-- Botón flotante: ver comparativo (abajo a la derecha) -->
+@if (solicitud && puedeMostrarComparativo) {
+  <a [routerLink]="['/cotizaciones/comparativo', solicitud.id]"
+     class="fab-comparativo" title="Ver comparativo de cotizaciones">
+    <i class="fas fa-balance-scale"></i>
+    <span>Ver comparativo</span>
+  </a>
+}

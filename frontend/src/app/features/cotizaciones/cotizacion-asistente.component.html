@@ -1,0 +1,609 @@
+<section class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-8">
+        <h1 class="m-0">Asistente de cotización</h1>
+      </div>
+      <div class="col-sm-4">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a routerLink="/dashboard">Inicio</a></li>
+          <li class="breadcrumb-item"><a routerLink="/solicitudes">Oportunidades</a></li>
+          <li class="breadcrumb-item active">Cotización</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content">
+  <div class="container-fluid">
+    @if (cargando) {
+      <div class="assistant-loading">Cargando asistente...</div>
+    } @else if (solicitud) {
+      <div class="assistant-steps">
+        <button type="button" class="step done" (click)="router.navigate(['/solicitudes', solicitud.id])">
+          <span>✓</span>Oportunidad
+        </button>
+        <button type="button" class="step" [class.active]="paso === 'productos'" (click)="activarPaso('productos')">
+          <span>2</span>Productos <b>{{ itemsProducto.length }}</b>
+        </button>
+        <button type="button" class="step" [class.active]="paso === 'servicios'" (click)="activarPaso('servicios')">
+          <span>3</span>Servicios <b>{{ itemsServicio.length }}</b>
+        </button>
+        <button type="button" class="step" [class.active]="paso === 'licencias'" (click)="activarPaso('licencias')">
+          <span>4</span>Software / Licencias <b>{{ itemsLicencia.length }}</b>
+        </button>
+        <button type="button" class="step" [class.active]="paso === 'proveedores'" (click)="activarPaso('proveedores')">
+          <span>5</span>Proveedores <b>{{ proveedoresSeleccionados.length }}</b>
+        </button>
+      </div>
+
+      <div class="assistant-layout">
+        <main class="assistant-main">
+          <div class="request-summary">
+            <div>
+              <span class="summary-label">Oportunidad</span>
+              <strong>{{ solicitud.numero || 'Sin número' }}</strong>
+            </div>
+            <div>
+              <span class="summary-label">Título</span>
+              <strong>{{ solicitud.titulo }}</strong>
+            </div>
+            <div>
+              <span class="summary-label">Solicitante</span>
+              <strong>{{ solicitud.solicitante_nombre }}</strong>
+            </div>
+            <div>
+              <span class="summary-label">Aprobador</span>
+              <strong>{{ solicitud.aprobador || 'Sin definir' }}</strong>
+            </div>
+            <div>
+              <span class="summary-label">Prioridad</span>
+              <strong>{{ solicitud.prioridad }}</strong>
+            </div>
+            <div>
+              <span class="summary-label">Versión publicada</span>
+              <strong>RFQ v{{ solicitud.version_actual || 1 }}</strong>
+            </div>
+          </div>
+
+          @if (error) {
+            <div class="alert alert-danger">{{ error }}</div>
+          }
+          @if (exito) {
+            <div class="alert alert-success">{{ exito }}</div>
+          }
+
+          @if (paso === 'productos') {
+            <article class="panel">
+              <header class="panel-head">
+                <div>
+                  <h2>Productos / Hardware</h2>
+                  <p>Selecciona la categoría parametrizada y llena las especificaciones configuradas.</p>
+                </div>
+              </header>
+              <div class="entry-grid">
+                <label class="span-2">
+                  <span>
+                    Categoría
+                    <span class="field-help" title="Seleccione la categoría que define los campos técnicos del producto.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <select [(ngModel)]="draft.categoriaId" (ngModelChange)="seleccionarCatalogo('producto', $event)">
+                    <option [ngValue]="null">Seleccione categoría</option>
+                    @for (categoria of categoriasHardware; track categoria.id) {
+                      <option [ngValue]="categoria.id">{{ categoria.nombre }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>
+                    Cantidad
+                    <span class="field-help" title="Número total de unidades que requiere la oportunidad.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <input type="number" min="1" [(ngModel)]="draft.cantidad">
+                </label>
+                <div class="specs-grid span-3">
+                  @if (camposCategoria.length > 0) {
+                    @for (campo of camposCategoria; track campo.id) {
+
+                      <!-- Campo con cantidad + texto/numero -->
+                      @if (campo.tiene_cantidad) {
+                        <div class="campo-row">
+                          <label class="campo-sub">
+                            Cant.
+                            <input type="number" min="0"
+                              [(ngModel)]="draft.specValues[campo.clave + '_cantidad']"
+                              placeholder="0">
+                          </label>
+                          <label class="campo-sub campo-grow">
+                            <span>
+                              {{ campo.nombre }}@if (campo.es_obligatorio) {<span class="required"> *</span>}
+                              @if (campo.descripcion_ayuda || campo.placeholder) {
+                                <span class="field-help" [title]="campo.descripcion_ayuda || campo.placeholder || ''">
+                                  <i class="fas fa-question-circle"></i>
+                                </span>
+                              }
+                            </span>
+                            <input type="text"
+                              [(ngModel)]="draft.specValues[campo.clave]"
+                              [placeholder]="campo.placeholder || campo.descripcion_ayuda || ''">
+                          </label>
+                          @if (campo.tiene_unidad && $any(campo.opciones_unidad)?.length > 0) {
+                            <label class="campo-sub">
+                              Unidad
+                              <select [(ngModel)]="draft.specValues[campo.clave + '_unidad']">
+                                <option [ngValue]="null">—</option>
+                                @for (u of campo.opciones_unidad; track u.id) {
+                                  <option [ngValue]="u.id">{{ u.simbolo }}</option>
+                                }
+                              </select>
+                            </label>
+                          }
+                        </div>
+                      }
+
+                      <!-- Campo solo con valor (+ opcional unidad) -->
+                      @if (!campo.tiene_cantidad) {
+                        <label>
+                          <span>
+                            {{ campo.nombre }}@if (campo.es_obligatorio) {<span class="required"> *</span>}
+                            @if (campo.descripcion_ayuda || campo.placeholder) {
+                              <span class="field-help" [title]="campo.descripcion_ayuda || campo.placeholder || ''">
+                                <i class="fas fa-question-circle"></i>
+                              </span>
+                            }
+                          </span>
+                          <div style="display:flex;gap:6px">
+                            @if (campo.tipo_dato === 'booleano') {
+                              <select [(ngModel)]="draft.specValues[campo.clave]" style="flex:1">
+                                <option [ngValue]="null">—</option>
+                                <option [ngValue]="true">Sí</option>
+                                <option [ngValue]="false">No</option>
+                              </select>
+                            } @else {
+                              <input style="flex:1"
+                                [type]="campo.tipo_dato === 'numero' ? 'number' : 'text'"
+                                [(ngModel)]="draft.specValues[campo.clave]"
+                                [placeholder]="campo.placeholder || campo.descripcion_ayuda || ''">
+                            }
+                            @if (campo.tiene_unidad && $any(campo.opciones_unidad)?.length > 0) {
+                              <select style="width:90px" [(ngModel)]="draft.specValues[campo.clave + '_unidad']">
+                                <option [ngValue]="null">—</option>
+                                @for (u of campo.opciones_unidad; track u.id) {
+                                  <option [ngValue]="u.id">{{ u.simbolo }}</option>
+                                }
+                              </select>
+                            }
+                          </div>
+                        </label>
+                      }
+
+                    }
+                  } @else {
+                    <div class="empty-specs">Selecciona una categoría para ver sus specs parametrizadas.</div>
+                  }
+                </div>
+                <label class="span-3">
+                  <span>
+                    Notas
+                    <span class="field-help" title="Agregue condiciones o aclaraciones específicas para este ítem.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <textarea rows="2" [(ngModel)]="draft.notas"></textarea>
+                </label>
+              </div>
+              <div class="item-form-actions">
+                <button type="button" class="btn btn-primary" (click)="agregarItem('producto')">
+                  {{ itemEnEdicion ? 'Guardar cambios' : 'Agregar producto' }}
+                </button>
+                @if (itemEnEdicion) {
+                  <button type="button" class="btn btn-light" (click)="cancelarEdicionItem()">Cancelar edición</button>
+                }
+              </div>
+            </article>
+          }
+
+          @if (paso === 'servicios') {
+            <article class="panel">
+              <header class="panel-head">
+                <div>
+                  <h2>Servicios</h2>
+                  <p>Selecciona la categoría parametrizada de servicio y completa sus campos.</p>
+                </div>
+              </header>
+              <div class="entry-grid">
+                <label class="span-2">
+                  <span>
+                    Categoría de servicio
+                    <span class="field-help" title="Seleccione la categoría que define el alcance y los campos del servicio.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <select [(ngModel)]="draft.categoriaId" (ngModelChange)="seleccionarCatalogo('servicio', $event)">
+                    <option [ngValue]="null">Seleccione categoría</option>
+                    @for (categoria of categoriasServicio; track categoria.id) {
+                      <option [ngValue]="categoria.id">{{ categoria.nombre }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>
+                    Cantidad
+                    <span class="field-help" title="Cantidad de servicios, jornadas, bolsas de horas o unidades requeridas.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <input type="number" min="1" [(ngModel)]="draft.cantidad">
+                </label>
+                <div class="specs-grid span-3">
+                  @if (camposCategoria.length > 0) {
+                    @for (campo of camposCategoria; track campo.id) {
+
+                      <!-- Campo con cantidad + texto/numero -->
+                      @if (campo.tiene_cantidad) {
+                        <div class="campo-row">
+                          <label class="campo-sub">
+                            Cant.
+                            <input type="number" min="0"
+                              [(ngModel)]="draft.specValues[campo.clave + '_cantidad']"
+                              placeholder="0">
+                          </label>
+                          <label class="campo-sub campo-grow">
+                            <span>
+                              {{ campo.nombre }}@if (campo.es_obligatorio) {<span class="required"> *</span>}
+                              @if (campo.descripcion_ayuda || campo.placeholder) {
+                                <span class="field-help" [title]="campo.descripcion_ayuda || campo.placeholder || ''">
+                                  <i class="fas fa-question-circle"></i>
+                                </span>
+                              }
+                            </span>
+                            <input type="text"
+                              [(ngModel)]="draft.specValues[campo.clave]"
+                              [placeholder]="campo.placeholder || campo.descripcion_ayuda || ''">
+                          </label>
+                          @if (campo.tiene_unidad && $any(campo.opciones_unidad)?.length > 0) {
+                            <label class="campo-sub">
+                              Unidad
+                              <select [(ngModel)]="draft.specValues[campo.clave + '_unidad']">
+                                <option [ngValue]="null">—</option>
+                                @for (u of campo.opciones_unidad; track u.id) {
+                                  <option [ngValue]="u.id">{{ u.simbolo }}</option>
+                                }
+                              </select>
+                            </label>
+                          }
+                        </div>
+                      }
+
+                      <!-- Campo solo con valor (+ opcional unidad) -->
+                      @if (!campo.tiene_cantidad) {
+                        <label>
+                          <span>
+                            {{ campo.nombre }}@if (campo.es_obligatorio) {<span class="required"> *</span>}
+                            @if (campo.descripcion_ayuda || campo.placeholder) {
+                              <span class="field-help" [title]="campo.descripcion_ayuda || campo.placeholder || ''">
+                                <i class="fas fa-question-circle"></i>
+                              </span>
+                            }
+                          </span>
+                          <div style="display:flex;gap:6px">
+                            @if (campo.tipo_dato === 'booleano') {
+                              <select [(ngModel)]="draft.specValues[campo.clave]" style="flex:1">
+                                <option [ngValue]="null">—</option>
+                                <option [ngValue]="true">Sí</option>
+                                <option [ngValue]="false">No</option>
+                              </select>
+                            } @else {
+                              <input style="flex:1"
+                                [type]="campo.tipo_dato === 'numero' ? 'number' : 'text'"
+                                [(ngModel)]="draft.specValues[campo.clave]"
+                                [placeholder]="campo.placeholder || campo.descripcion_ayuda || ''">
+                            }
+                            @if (campo.tiene_unidad && $any(campo.opciones_unidad)?.length > 0) {
+                              <select style="width:90px" [(ngModel)]="draft.specValues[campo.clave + '_unidad']">
+                                <option [ngValue]="null">—</option>
+                                @for (u of campo.opciones_unidad; track u.id) {
+                                  <option [ngValue]="u.id">{{ u.simbolo }}</option>
+                                }
+                              </select>
+                            }
+                          </div>
+                        </label>
+                      }
+
+                    }
+                  } @else {
+                    <div class="empty-specs">Selecciona una categoría para ver sus campos configurados.</div>
+                  }
+                </div>
+                <label class="span-3">
+                  <span>
+                    Notas
+                    <span class="field-help" title="Agregue condiciones, entregables o aclaraciones para este servicio.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <textarea rows="2" [(ngModel)]="draft.notas"></textarea>
+                </label>
+              </div>
+              <div class="item-form-actions">
+                <button type="button" class="btn btn-primary" (click)="agregarItem('servicio')">
+                  {{ itemEnEdicion ? 'Guardar cambios' : 'Agregar servicio' }}
+                </button>
+                @if (itemEnEdicion) {
+                  <button type="button" class="btn btn-light" (click)="cancelarEdicionItem()">Cancelar edición</button>
+                }
+              </div>
+            </article>
+          }
+
+          @if (paso === 'licencias') {
+            <article class="panel">
+              <header class="panel-head">
+                <div>
+                  <h2>Software / Licencias</h2>
+                  <p>Selecciona la categoría parametrizada de software/licencia y completa sus campos.</p>
+                </div>
+              </header>
+              <div class="entry-grid">
+                <label class="span-2">
+                  <span>
+                    Categoría
+                    <span class="field-help" title="Seleccione el tipo de software o licencia requerido.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <select [(ngModel)]="draft.categoriaId" (ngModelChange)="seleccionarCatalogo('licencia', $event)">
+                    <option [ngValue]="null">Seleccione categoría</option>
+                    @for (categoria of categoriasLicencia; track categoria.id) {
+                      <option [ngValue]="categoria.id">{{ categoria.nombre }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span>
+                    Cantidad / usuarios
+                    <span class="field-help" title="Número de licencias, usuarios, dispositivos o suscripciones requeridas.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <input type="number" min="1" [(ngModel)]="draft.cantidad">
+                </label>
+                <div class="specs-grid span-3">
+                  @if (camposCategoria.length > 0) {
+                    @for (campo of camposCategoria; track campo.id) {
+
+                      <!-- Campo con cantidad + texto/numero -->
+                      @if (campo.tiene_cantidad) {
+                        <div class="campo-row">
+                          <label class="campo-sub">
+                            Cant.
+                            <input type="number" min="0"
+                              [(ngModel)]="draft.specValues[campo.clave + '_cantidad']"
+                              placeholder="0">
+                          </label>
+                          <label class="campo-sub campo-grow">
+                            <span>
+                              {{ campo.nombre }}@if (campo.es_obligatorio) {<span class="required"> *</span>}
+                              @if (campo.descripcion_ayuda || campo.placeholder) {
+                                <span class="field-help" [title]="campo.descripcion_ayuda || campo.placeholder || ''">
+                                  <i class="fas fa-question-circle"></i>
+                                </span>
+                              }
+                            </span>
+                            <input type="text"
+                              [(ngModel)]="draft.specValues[campo.clave]"
+                              [placeholder]="campo.placeholder || campo.descripcion_ayuda || ''">
+                          </label>
+                          @if (campo.tiene_unidad && $any(campo.opciones_unidad)?.length > 0) {
+                            <label class="campo-sub">
+                              Unidad
+                              <select [(ngModel)]="draft.specValues[campo.clave + '_unidad']">
+                                <option [ngValue]="null">—</option>
+                                @for (u of campo.opciones_unidad; track u.id) {
+                                  <option [ngValue]="u.id">{{ u.simbolo }}</option>
+                                }
+                              </select>
+                            </label>
+                          }
+                        </div>
+                      }
+
+                      <!-- Campo solo con valor (+ opcional unidad) -->
+                      @if (!campo.tiene_cantidad) {
+                        <label>
+                          <span>
+                            {{ campo.nombre }}@if (campo.es_obligatorio) {<span class="required"> *</span>}
+                            @if (campo.descripcion_ayuda || campo.placeholder) {
+                              <span class="field-help" [title]="campo.descripcion_ayuda || campo.placeholder || ''">
+                                <i class="fas fa-question-circle"></i>
+                              </span>
+                            }
+                          </span>
+                          <div style="display:flex;gap:6px">
+                            @if (campo.tipo_dato === 'booleano') {
+                              <select [(ngModel)]="draft.specValues[campo.clave]" style="flex:1">
+                                <option [ngValue]="null">—</option>
+                                <option [ngValue]="true">Sí</option>
+                                <option [ngValue]="false">No</option>
+                              </select>
+                            } @else {
+                              <input style="flex:1"
+                                [type]="campo.tipo_dato === 'numero' ? 'number' : 'text'"
+                                [(ngModel)]="draft.specValues[campo.clave]"
+                                [placeholder]="campo.placeholder || campo.descripcion_ayuda || ''">
+                            }
+                            @if (campo.tiene_unidad && $any(campo.opciones_unidad)?.length > 0) {
+                              <select style="width:90px" [(ngModel)]="draft.specValues[campo.clave + '_unidad']">
+                                <option [ngValue]="null">—</option>
+                                @for (u of campo.opciones_unidad; track u.id) {
+                                  <option [ngValue]="u.id">{{ u.simbolo }}</option>
+                                }
+                              </select>
+                            }
+                          </div>
+                        </label>
+                      }
+
+                    }
+                  } @else {
+                    <div class="empty-specs">Selecciona una categoría para ver sus specs parametrizadas.</div>
+                  }
+                </div>
+                <label class="span-3">
+                  <span>
+                    Notas
+                    <span class="field-help" title="Agregue condiciones de licenciamiento, renovación o soporte.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </span>
+                  <textarea rows="2" [(ngModel)]="draft.notas"></textarea>
+                </label>
+              </div>
+              <div class="item-form-actions">
+                <button type="button" class="btn btn-primary" (click)="agregarItem('licencia')">
+                  {{ itemEnEdicion ? 'Guardar cambios' : 'Agregar licencia' }}
+                </button>
+                @if (itemEnEdicion) {
+                  <button type="button" class="btn btn-light" (click)="cancelarEdicionItem()">Cancelar edición</button>
+                }
+              </div>
+            </article>
+          }
+
+          @if (paso !== 'proveedores') {
+            <article class="panel list-panel">
+              <header class="panel-head">
+                <h2>Ítems de la oportunidad</h2>
+                <span>{{ totalItems }} ítems</span>
+              </header>
+              @if (items.length === 0) {
+                <div class="empty-state">Aún no hay ítems agregados.</div>
+              } @else {
+                <div class="item-list">
+                  @for (item of items; track item.orden) {
+                    <div class="item-row">
+                      <span class="type-pill">{{ item.tipo }}</span>
+                      <div>
+                        <strong>{{ item.descripcion }}</strong>
+                        <small>{{ item.cantidad }} {{ item._unidadNombre || '' }} · {{ getEspecificacionesResumen(item) }}</small>
+                      </div>
+                      <div class="item-actions">
+                        <button type="button" class="icon-action edit" (click)="editarItem(item)" title="Editar ítem">
+                          <i class="fas fa-edit"></i>
+                          Editar
+                        </button>
+                        <button type="button" class="icon-action" (click)="eliminarItem(item)" title="Eliminar ítem">
+                          <i class="fas fa-trash-alt"></i>
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </article>
+          }
+
+          @if (paso === 'proveedores') {
+            <article class="panel">
+              <header class="panel-head">
+                <div>
+                  <h2>Selección de proveedores</h2>
+                  <p>Los sugeridos quedan marcados. Puedes agregar o retirar proveedores manualmente.</p>
+                </div>
+                <label class="date-field">
+                  Fecha límite
+                  <input type="date" [(ngModel)]="fechaLimiteRFQ">
+                </label>
+              </header>
+
+              <div class="provider-transfer">
+                <section>
+                  <h3>Disponibles</h3>
+                  <div class="provider-list">
+                    @for (proveedor of proveedoresDisponibles; track proveedor.id) {
+                      <button type="button" class="provider-card" (click)="moverProveedor(proveedor, true)">
+                        <strong>{{ proveedor.nombre_comercial || proveedor.razon_social }}</strong>
+                        <span>{{ proveedor.score }} coincidencias · {{ proveedor.pais }}</span>
+                        @if (proveedor.criterios.length > 0) {
+                          <div class="provider-criteria">
+                            @for (criterio of proveedor.criterios; track criterio.item_id + '-' + criterio.etiqueta + '-' + criterio.tipo) {
+                              <small [title]="criterio.coincidencia">
+                                <b>{{ criterio.etiqueta }}</b> → {{ criterio.item_descripcion }}
+                              </small>
+                            }
+                          </div>
+                        } @else {
+                          <small class="provider-no-match">Sin coincidencias automáticas</small>
+                        }
+                      </button>
+                    } @empty {
+                      <div class="empty-state">No hay proveedores disponibles.</div>
+                    }
+                  </div>
+                </section>
+                <section>
+                  <h3>Seleccionados</h3>
+                  <div class="provider-list selected">
+                    @for (proveedor of proveedoresSeleccionados; track proveedor.id) {
+                      <button type="button" class="provider-card checked" (click)="moverProveedor(proveedor, false)">
+                        <strong>{{ proveedor.nombre_comercial || proveedor.razon_social }}</strong>
+                        <span>{{ proveedor.itemIds.length }} ítems asignados · {{ proveedor.sugerido ? 'Sugerido' : 'Manual' }}</span>
+                        @if (proveedor.criterios.length > 0) {
+                          <div class="provider-criteria">
+                            @for (criterio of proveedor.criterios; track criterio.item_id + '-' + criterio.etiqueta + '-' + criterio.tipo) {
+                              <small [title]="criterio.coincidencia">
+                                <b>{{ criterio.etiqueta }}</b> → {{ criterio.item_descripcion }}
+                              </small>
+                            }
+                          </div>
+                        }
+                      </button>
+                    } @empty {
+                      <div class="empty-state">Seleccione proveedores para enviar la RFQ.</div>
+                    }
+                  </div>
+                </section>
+              </div>
+            </article>
+          }
+        </main>
+
+        <aside class="assistant-side">
+          <div class="side-box">
+            <h3>Resumen</h3>
+            <div><span>Productos</span><strong>{{ itemsProducto.length }}</strong></div>
+            <div><span>Servicios</span><strong>{{ itemsServicio.length }}</strong></div>
+            <div><span>Licencias</span><strong>{{ itemsLicencia.length }}</strong></div>
+            <div><span>Proveedores</span><strong>{{ proveedoresSeleccionados.length }}</strong></div>
+          </div>
+          <div class="side-box subtle">
+            <h3>Versión RFQ</h3>
+            <p>Si reenvías esta RFQ, el backend conservará el mismo link por proveedor y guardará un snapshot por versión.</p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="assistant-actions">
+        <button type="button" class="btn btn-light" [routerLink]="['/solicitudes', solicitud.id]">Volver</button>
+        @if (paso === 'productos') {
+          <button type="button" class="btn btn-primary" [disabled]="guardando" (click)="guardarItemsYContinuar('servicios')">Guardar y seguir</button>
+        } @else if (paso === 'servicios') {
+          <button type="button" class="btn btn-primary" [disabled]="guardando" (click)="guardarItemsYContinuar('licencias')">Guardar y seguir</button>
+        } @else if (paso === 'licencias') {
+          <button type="button" class="btn btn-primary" [disabled]="guardando" (click)="guardarItemsYContinuar('proveedores')">Guardar y seleccionar proveedores</button>
+        } @else {
+          <button type="button" class="btn btn-success" [disabled]="guardando" (click)="enviarRFQ()">Enviar RFQ a seleccionados</button>
+        }
+      </div>
+    } @else {
+      <div class="alert alert-danger">Oportunidad no encontrada.</div>
+    }
+  </div>
+</section>

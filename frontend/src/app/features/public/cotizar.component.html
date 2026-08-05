@@ -1,0 +1,407 @@
+<div style="min-height:100vh;background:#f4f6f8;">
+
+  <!-- Header simple -->
+  <div style="background:#003087;padding:16px 24px;color:#fff;display:flex;align-items:center;gap:12px;">
+    <i class="fas fa-shopping-cart" style="font-size:22px;"></i>
+    <div>
+      <div style="font-size:18px;font-weight:600;">SISA Compras</div>
+      <div style="font-size:12px;opacity:.8;">Portal de Cotización para Proveedores</div>
+    </div>
+  </div>
+
+  <main class="public-quote-content">
+
+    <!-- Estado: cargando -->
+    @if (cargando) {
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <dx-load-indicator [visible]="true"></dx-load-indicator>
+          <p class="mt-3 text-muted">Cargando cotización...</p>
+        </div>
+      </div>
+    }
+
+    <!-- Estado: error -->
+    @if (!cargando && error && !cotizacion) {
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-exclamation-circle text-danger" style="font-size:48px;"></i>
+          <h4 class="mt-3">Link inválido</h4>
+          <p class="text-muted">{{ error }}</p>
+          <p class="small text-muted">Si cree que es un error, contacte al equipo de compras de SISA.</p>
+        </div>
+      </div>
+    }
+
+    <!-- Estado: ya respondida -->
+    @if (!cargando && enviado && cotizacion) {
+      <div class="card">
+        <div class="card-body text-center py-5">
+          <i class="fas fa-check-circle text-success" style="font-size:56px;"></i>
+          <h3 class="mt-3">¡Cotización enviada exitosamente!</h3>
+          <p class="text-muted">
+            Gracias, <strong>{{ cotizacion.proveedor_nombre }}</strong>.<br>
+            Su cotización para <strong>{{ cotizacion.solicitud_titulo }}</strong> fue recibida.<br>
+            El equipo de compras de SISA la revisará pronto.
+          </p>
+        </div>
+      </div>
+    }
+
+    <!-- Formulario principal -->
+    @if (!cargando && cotizacion && !enviado) {
+
+      <!-- Info de la solicitud -->
+      <div class="card mb-3" data-tour="supplier-quote-summary">
+        <div class="card-header" style="background:#003087;color:#fff;">
+          <h5 class="mb-0">
+            <i class="fas fa-file-alt mr-2"></i>
+            {{ cotizacion.solicitud_numero ? (cotizacion.solicitud_numero + ' — ') : '' }}{{ cotizacion.solicitud_titulo }}
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <small class="text-muted d-block">Proveedor</small>
+              <strong>{{ cotizacion.proveedor_nombre }}</strong>
+            </div>
+            <div class="col-md-4">
+              <small class="text-muted d-block">Fecha requerida</small>
+              <strong>
+                {{ cotizacion.solicitud_fecha_requerida ? (cotizacion.solicitud_fecha_requerida | date:'dd/MM/yyyy') : 'Sin definir' }}
+              </strong>
+            </div>
+            <div class="col-md-4">
+              <small class="text-muted d-block">Prioridad</small>
+              <span class="badge" [ngClass]="getPrioridadBadge(cotizacion.solicitud_prioridad)">
+                {{ cotizacion.solicitud_prioridad }}
+              </span>
+            </div>
+          </div>
+          <div class="mt-3">
+            <span class="badge badge-primary">Versión RFQ {{ cotizacion.version_actual }}</span>
+            <span class="badge badge-light border ml-2">
+              Límite de respuesta:
+              {{ cotizacion.fecha_limite_respuesta ? (cotizacion.fecha_limite_respuesta | date:'dd/MM/yyyy') : 'sin definir' }}
+            </span>
+            @if (cotizacion.respuesta_version && cotizacion.respuesta_version !== cotizacion.version_actual) {
+              <span class="badge badge-warning ml-2">
+                Respuesta anterior: versión {{ cotizacion.respuesta_version }}
+              </span>
+            }
+            @if (tasasCambio.length > 0) {
+              <span class="ml-2 text-muted small">
+                TRM:
+                @for (t of tasasCambio; track t.moneda) {
+                  1 {{ t.moneda }} = {{ t.tasa_cop | number:'1.2-2' }} COP
+                  @if (!$last) { &nbsp;·&nbsp; }
+                }
+              </span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Error no crítico -->
+      @if (error) {
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+        </div>
+      }
+
+      <!-- Tabla de ítems -->
+      <div class="card mb-3" data-tour="supplier-quote-items">
+        <div class="card-header d-flex align-items-center">
+          <h5 class="mb-0 flex-grow-1">
+            <i class="fas fa-list mr-2"></i>Ítems a cotizar
+          </h5>
+          <span class="badge badge-light border">{{ cotizacion.items.length }} ítems</span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead style="background:#f8f9fa;">
+                <tr>
+                  <th style="width:40px;">#</th>
+                  <th data-tour="supplier-quote-specs">Descripción y especificaciones</th>
+                  <th style="width:80px;">Tipo</th>
+                  <th class="text-right" style="width:90px;">Cantidad</th>
+                  <th class="text-right" style="width:150px;" data-tour="supplier-quote-price">
+                    Precio unitario <span class="text-danger">*</span>
+                  </th>
+                  @if (isMultiMoneda()) {
+                    <th style="width:90px;">Moneda</th>
+                  }
+                  <th class="text-center" style="width:90px;" data-tour="supplier-quote-availability">
+                    Disponible
+                  </th>
+                  <th class="text-right" style="width:110px;" data-tour="supplier-quote-delivery">
+                    Días entrega
+                  </th>
+                  <th class="text-right" style="width:130px;">Subtotal {{ monedaDefecto }}</th>
+                  <th style="min-width:180px;" data-tour="supplier-quote-item-notes">Observación</th>
+                  <th style="width:120px;">Ficha técnica</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of cotizacion.items; track item.id; let i = $index) {
+                  <tr
+                    class="item-quote-row"
+                    [class.table-danger]="!itemsForm[i].disponible"
+                    [class.item-expanded]="estaExpandido(item.id)"
+                  >
+                    <td class="text-muted">{{ i + 1 }}</td>
+                    <td>
+                      <strong>{{ item.item_solicitud?.descripcion ?? '—' }}</strong>
+                      @if (tieneEspecificaciones(item.id)) {
+                        <button
+                          type="button"
+                          class="specs-toggle specs-toggle-inline"
+                          [class.expanded]="estaExpandido(item.id)"
+                          [attr.aria-expanded]="estaExpandido(item.id)"
+                          [attr.aria-controls]="'specs-' + item.id"
+                          (click)="alternarEspecificaciones(item.id)"
+                        >
+                          <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                          <span class="specs-toggle-label">Especificaciones</span>
+                        </button>
+                      }
+                    </td>
+                    <td>
+                      <span class="badge" [ngClass]="getTipoBadge(item.item_solicitud?.tipo ?? '')">
+                        {{ item.item_solicitud?.tipo ?? '—' }}
+                      </span>
+                    </td>
+                    <td class="text-right">{{ item.item_solicitud?.cantidad ?? '—' }}</td>
+
+                    <!-- Precio unitario -->
+                    <td class="text-right" style="min-width:140px;">
+                      <dx-number-box
+                        [value]="$any(itemsForm[i].precio_unitario)"
+                        (valueChange)="itemsForm[i].precio_unitario = $event"
+                        [min]="0"
+                        format="#,##0.00"
+                        [width]="'100%'"
+                        [disabled]="!itemsForm[i].disponible"
+                        placeholder="0.00"
+                      ></dx-number-box>
+                    </td>
+
+                    <!-- Moneda -->
+                    @if (isMultiMoneda()) {
+                      <td style="min-width:90px;">
+                        <dx-select-box
+                          [items]="monedasDisponibles"
+                          [value]="itemsForm[i].moneda"
+                          (valueChange)="itemsForm[i].moneda = $event"
+                          [width]="'100%'"
+                          [disabled]="!itemsForm[i].disponible"
+                        ></dx-select-box>
+                      </td>
+                    }
+
+                    <!-- Disponible -->
+                    <td class="text-center">
+                      <dx-check-box
+                        [value]="itemsForm[i].disponible"
+                        (valueChange)="itemsForm[i].disponible = !!$event"
+                      ></dx-check-box>
+                    </td>
+
+                    <!-- Días entrega -->
+                    <td class="text-right" style="min-width:110px;">
+                      <dx-number-box
+                        [value]="$any(itemsForm[i].tiempo_entrega_dias)"
+                        (valueChange)="itemsForm[i].tiempo_entrega_dias = $event"
+                        [min]="0"
+                        [width]="'100%'"
+                        [disabled]="!itemsForm[i].disponible"
+                        placeholder="días"
+                      ></dx-number-box>
+                    </td>
+
+                    <!-- Subtotal en moneda defecto del proveedor -->
+                    <td class="text-right font-weight-bold" style="white-space:nowrap;">
+                      {{ getSubtotalEnDefecto(i) | number:'1.2-2' }}
+                      @if (itemNecesitaConversion(i)) {
+                        <br>
+                        <span class="text-muted small font-weight-normal">
+                          ({{ getSubtotal(i) | number:'1.2-2' }} {{ itemsForm[i].moneda }})
+                        </span>
+                      }
+                    </td>
+
+                    <!-- Observación -->
+                    <td style="min-width:180px;">
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        [value]="itemsForm[i].notas"
+                        (input)="itemsForm[i].notas = $any($event.target).value"
+                        placeholder="Observación..."
+                        [disabled]="!itemsForm[i].disponible"
+                      />
+                    </td>
+
+                    <!-- Ficha técnica PDF -->
+                    <td style="width:120px;white-space:nowrap;">
+                      @if (fichasTecnicasUrls[item.id]) {
+                        <a [href]="fichasTecnicasUrls[item.id]" target="_blank"
+                           class="btn btn-xs btn-outline-success mr-1" title="Ver PDF">
+                          <i class="fas fa-file-pdf"></i>
+                        </a>
+                      }
+                      @if (fichasSubiendo[item.id]) {
+                        <span class="spinner-border spinner-border-sm text-secondary"></span>
+                      } @else {
+                        <label class="btn btn-xs btn-outline-secondary mb-0" style="cursor:pointer;" title="Subir ficha técnica PDF">
+                          <i class="fas fa-upload"></i>
+                          <input type="file" accept=".pdf,application/pdf" style="display:none;"
+                                 (change)="onFichaSeleccionada($event, item.id)" />
+                        </label>
+                      }
+                    </td>
+
+                  </tr>
+
+                  @if (tieneEspecificaciones(item.id) && estaExpandido(item.id)) {
+                    <tr class="specs-detail-row" [id]="'specs-' + item.id">
+                      <td colspan="10">
+                        <div class="specs-detail">
+                          <div class="specs-detail-heading">
+                            <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                            <div>
+                              <strong>Especificaciones solicitadas</strong>
+                              <span>{{ item.item_solicitud?.descripcion }}</span>
+                            </div>
+                          </div>
+                          <dl class="specs-grid">
+                            @for (spec of especificacionesPorItem[item.id]; track $index) {
+                              <div class="spec-field">
+                                <dt>
+                                  <span>{{ spec.nombre }}</span>
+                                  @if (spec.tipoDato) {
+                                    <span class="spec-kind">{{ spec.tipoDato }}</span>
+                                  }
+                                </dt>
+                                <dd>
+                                  {{ spec.valor }}
+                                </dd>
+                                @if (spec.cantidad || spec.unidad) {
+                                  <div class="spec-meta">
+                                    @if (spec.cantidad) {
+                                      <span>Cantidad: <strong>{{ spec.cantidad }}</strong></span>
+                                    }
+                                    @if (spec.unidad) {
+                                      <span>Unidad: <strong>{{ spec.unidad }}</strong></span>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </dl>
+                          @if (item.item_solicitud?.notas) {
+                            <p class="specs-analyst-note">
+                              <strong>Nota del analista:</strong> {{ item.item_solicitud?.notas }}
+                            </p>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+                @empty {
+                  <tr>
+                    <td colspan="10" class="text-center text-muted py-4">Sin ítems en esta cotización.</td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr style="background:#f8f9fa;font-weight:bold;">
+                  <td [attr.colspan]="isMultiMoneda() ? 8 : 7" class="text-right">
+                    TOTAL ESTIMADO ({{ monedaDefecto }}):
+                  </td>
+                  <td class="text-right" style="font-size:15px;white-space:nowrap;">
+                    {{ getTotalEnDefecto() | number:'1.2-2' }}
+                  </td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notas del proveedor -->
+      <div class="card mb-3" data-tour="supplier-quote-general-notes">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-comment-alt mr-2"></i>Observaciones generales (opcional)</h5>
+        </div>
+        <div class="card-body">
+          <dx-text-area
+            [value]="notasProveedor"
+            (valueChange)="notasProveedor = $event"
+            [height]="100"
+            placeholder="Notas generales sobre la cotización, condiciones de pago, garantías, etc..."
+          ></dx-text-area>
+        </div>
+      </div>
+
+      <!-- PDF general de cotización -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="fas fa-file-pdf mr-2"></i>PDF de cotización (opcional)</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-2">
+            Podés adjuntar un documento PDF con tu cotización formal, condiciones comerciales o cualquier anexo.
+          </p>
+          @if (uploadError) {
+            <div class="alert alert-warning py-2 mb-2">
+              <i class="fas fa-exclamation-triangle mr-1"></i>{{ uploadError }}
+            </div>
+          }
+          <div class="d-flex align-items-center gap-2" style="gap:10px;">
+            @if (pdfCotizacionSubiendo) {
+              <span class="spinner-border spinner-border-sm text-secondary mr-2"></span>
+              <span class="text-muted small">Subiendo PDF...</span>
+            } @else {
+              <label class="btn btn-outline-primary btn-sm mb-0" style="cursor:pointer;">
+                <i class="fas fa-upload mr-1"></i>
+                {{ pdfCotizacionUrl ? 'Reemplazar PDF' : 'Subir PDF' }}
+                <input type="file" accept=".pdf,application/pdf" style="display:none;"
+                       (change)="onPdfCotizacionSeleccionado($event)" />
+              </label>
+              @if (pdfCotizacionUrl) {
+                <a [href]="pdfCotizacionUrl" target="_blank" class="btn btn-sm btn-outline-success">
+                  <i class="fas fa-eye mr-1"></i>Ver PDF subido
+                </a>
+              }
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón enviar -->
+      <div class="d-flex justify-content-end mb-5" data-tour="supplier-quote-submit">
+        <dx-button
+          text="Enviar cotización"
+          type="success"
+          icon="email"
+          [disabled]="guardando"
+          (onClick)="enviar()"
+          [width]="220"
+          [height]="42"
+        ></dx-button>
+      </div>
+
+    }
+
+  </main>
+
+  <!-- Footer -->
+  <div style="background:#003087;color:#fff;text-align:center;padding:12px;font-size:12px;opacity:.8;">
+    SISA — Sistema de Gestión de Compras · Portal de Proveedores
+  </div>
+
+</div>

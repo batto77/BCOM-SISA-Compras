@@ -1,0 +1,215 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Parámetros del sistema</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/administracion']">Administración</a></li>
+          <li class="breadcrumb-item active">Parámetros</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    <div class="card">
+      <div class="card-header p-0 border-bottom-0">
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="tabActiva === 'unidades'" (click)="seleccionarTab('unidades')" href="javascript:void(0)">
+              <i class="fas fa-ruler mr-1"></i>Unidades de medida
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="tabActiva === 'rubros'" (click)="seleccionarTab('rubros')" href="javascript:void(0)">
+              <i class="fas fa-coins mr-1"></i>Rubros presupuestales
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" [class.active]="tabActiva === 'ans'" (click)="seleccionarTab('ans')" href="javascript:void(0)">
+              <i class="fas fa-clock mr-1"></i>Plantillas ANS
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card-body position-relative">
+
+        @if (cargando) {
+          <div class="overlay">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+          </div>
+        }
+
+        <div class="d-flex justify-content-end mb-3">
+          <button class="btn btn-outline-secondary btn-sm mr-2" (click)="limpiarFiltros()" title="Limpiar filtros del grid">
+            <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+          </button>
+          <button class="btn btn-primary btn-sm" (click)="abrirNuevo()">
+            <i class="fas fa-plus mr-1"></i>Agregar
+          </button>
+        </div>
+
+        <!-- Tab: Unidades de medida -->
+        @if (tabActiva === 'unidades') {
+          <dx-data-grid [dataSource]="unidades" [showBorders]="false" [rowAlternationEnabled]="true" [hoverStateEnabled]="true" [columnAutoWidth]="true"
+            (onInitialized)="onGridInit($event)">
+            <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+            <dxo-filter-row [visible]="true"></dxo-filter-row>
+            <dxo-header-filter [visible]="true"></dxo-header-filter>
+            <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
+            <dxi-column dataField="simbolo" caption="Símbolo" [width]="100"></dxi-column>
+            <dxi-column dataField="categoria" caption="Categoría"></dxi-column>
+            <dxi-column caption="Activo" [width]="80" cellTemplate="activoTpl"></dxi-column>
+            <div *dxTemplate="let c of 'activoTpl'">
+              <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
+                {{ c.data.activo ? 'Sí' : 'No' }}
+              </span>
+            </div>
+            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesTpl"></dxi-column>
+            <div *dxTemplate="let c of 'accionesTpl'">
+              <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+              </button>
+            </div>
+          </dx-data-grid>
+        }
+
+        <!-- Tab: Rubros presupuestales -->
+        @if (tabActiva === 'rubros') {
+          <dx-data-grid [dataSource]="rubros" [showBorders]="false" [rowAlternationEnabled]="true" [hoverStateEnabled]="true" [columnAutoWidth]="true"
+            (onInitialized)="onGridInit($event)">
+            <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+            <dxo-filter-row [visible]="true"></dxo-filter-row>
+            <dxo-header-filter [visible]="true"></dxo-header-filter>
+            <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
+            <dxi-column dataField="codigo" caption="Código" [width]="120"></dxi-column>
+            <dxi-column caption="Monto máx. auto-aprobación" [width]="220" cellTemplate="montoPTpl"></dxi-column>
+            <div *dxTemplate="let c of 'montoPTpl'">
+              {{ formatoPesos(c.data.monto_max_auto_aprobacion) }}
+            </div>
+            <dxi-column caption="Activo" [width]="80" cellTemplate="activoRTpl"></dxi-column>
+            <div *dxTemplate="let c of 'activoRTpl'">
+              <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
+                {{ c.data.activo ? 'Sí' : 'No' }}
+              </span>
+            </div>
+            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesRTpl"></dxi-column>
+            <div *dxTemplate="let c of 'accionesRTpl'">
+              <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+              </button>
+            </div>
+          </dx-data-grid>
+        }
+
+        <!-- Tab: Plantillas ANS -->
+        @if (tabActiva === 'ans') {
+          <dx-data-grid [dataSource]="plantillasANS" [showBorders]="false" [rowAlternationEnabled]="true" [hoverStateEnabled]="true" [columnAutoWidth]="true"
+            (onInitialized)="onGridInit($event)">
+            <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+            <dxo-filter-row [visible]="true"></dxo-filter-row>
+            <dxo-header-filter [visible]="true"></dxo-header-filter>
+            <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
+            <dxi-column dataField="horas" caption="Horas" [width]="100"></dxi-column>
+            <dxi-column dataField="descripcion" caption="Descripción"></dxi-column>
+            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesATpl"></dxi-column>
+            <div *dxTemplate="let c of 'accionesATpl'">
+              <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
+                <i class="fas fa-pencil-alt"></i>
+              </button>
+            </div>
+          </dx-data-grid>
+        }
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup edición genérica -->
+<dx-popup
+  [(visible)]="popupVisible"
+  [title]="tituloPopup"
+  [width]="480"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  (onHidden)="cancelar()"
+>
+  <div *dxTemplate="let data of 'content'">
+
+    <!-- Unidades de medida -->
+    @if (tabActiva === 'unidades') {
+      <div class="form-group">
+        <label>Nombre <span class="text-danger">*</span></label>
+        <dx-text-box [value]="$any(itemActual['nombre']) ?? ''" (valueChange)="itemActual['nombre'] = $event" placeholder="Ej: Kilogramo, Metro..." [showClearButton]="true"></dx-text-box>
+      </div>
+      <div class="form-group">
+        <label>Símbolo <span class="text-danger">*</span></label>
+        <dx-text-box [value]="$any(itemActual['simbolo']) ?? ''" (valueChange)="itemActual['simbolo'] = $event" placeholder="Ej: kg, m, L..." [showClearButton]="true"></dx-text-box>
+      </div>
+      <div class="form-group">
+        <label>Categoría</label>
+        <dx-text-box [value]="$any(itemActual['categoria']) ?? ''" (valueChange)="itemActual['categoria'] = $event" placeholder="Ej: Masa, Longitud..." [showClearButton]="true"></dx-text-box>
+      </div>
+      <div class="form-group d-flex align-items-center">
+        <label class="mr-3 mb-0">Activo</label>
+        <dx-switch [value]="$any(itemActual['activo']) ?? false" (valueChange)="itemActual['activo'] = $event"></dx-switch>
+      </div>
+    }
+
+    <!-- Rubros -->
+    @if (tabActiva === 'rubros') {
+      <div class="form-group">
+        <label>Nombre <span class="text-danger">*</span></label>
+        <dx-text-box [value]="$any(itemActual['nombre']) ?? ''" (valueChange)="itemActual['nombre'] = $event" placeholder="Nombre del rubro..." [showClearButton]="true"></dx-text-box>
+      </div>
+      <div class="form-group">
+        <label>Código</label>
+        <dx-text-box [value]="$any(itemActual['codigo']) ?? ''" (valueChange)="itemActual['codigo'] = $event" placeholder="Código presupuestal..." [showClearButton]="true"></dx-text-box>
+      </div>
+      <div class="form-group">
+        <label>Monto máx. auto-aprobación (COP)</label>
+        <dx-number-box [value]="$any(itemActual['monto_max_auto_aprobacion']) ?? 0" (valueChange)="itemActual['monto_max_auto_aprobacion'] = $event" [format]="'#,##0'" placeholder="0"></dx-number-box>
+      </div>
+      <div class="form-group d-flex align-items-center">
+        <label class="mr-3 mb-0">Activo</label>
+        <dx-switch [value]="$any(itemActual['activo']) ?? false" (valueChange)="itemActual['activo'] = $event"></dx-switch>
+      </div>
+    }
+
+    <!-- Plantillas ANS -->
+    @if (tabActiva === 'ans') {
+      <div class="form-group">
+        <label>Nombre <span class="text-danger">*</span></label>
+        <dx-text-box [value]="$any(itemActual['nombre']) ?? ''" (valueChange)="itemActual['nombre'] = $event" placeholder="Ej: Urgente 4h, Normal 48h..." [showClearButton]="true"></dx-text-box>
+      </div>
+      <div class="form-group">
+        <label>Horas <span class="text-danger">*</span></label>
+        <dx-number-box [value]="$any(itemActual['horas']) ?? 0" (valueChange)="itemActual['horas'] = $event" [min]="1" [step]="1" placeholder="Horas de atención"></dx-number-box>
+      </div>
+      <div class="form-group">
+        <label>Descripción</label>
+        <dx-text-box [value]="$any(itemActual['descripcion']) ?? ''" (valueChange)="itemActual['descripcion'] = $event" placeholder="Descripción opcional..." [showClearButton]="true"></dx-text-box>
+      </div>
+    }
+
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-secondary mr-2" (click)="cancelar()">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardar()">
+        <i class="fas fa-save mr-1"></i>Guardar
+      </button>
+    </div>
+  </div>
+</dx-popup>

@@ -1,0 +1,356 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">{{ modoEdicion ? 'Editar proveedor' : 'Nuevo proveedor' }}</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/proveedores']">Proveedores</a></li>
+          <li class="breadcrumb-item active">{{ modoEdicion ? 'Editar' : 'Nuevo' }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+    @if (exito) {
+      <div class="alert alert-success alert-dismissible">
+        <button type="button" class="close" (click)="exito = ''"><span>&times;</span></button>
+        <i class="fas fa-check-circle mr-2"></i>{{ exito }}
+      </div>
+    }
+
+    @if (cargando) {
+      <div class="text-center py-5">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-primary"></i>
+        <p class="mt-2 text-muted">Cargando proveedor...</p>
+      </div>
+    } @else {
+
+      <!-- Card 1: Datos generales -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="fas fa-building mr-2"></i>Datos generales</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>NIT / ID <span class="text-danger">*</span></label>
+                <dx-text-box [value]="proveedor.nit ?? ''" (valueChange)="proveedor.nit = $event" placeholder="Ej: 900123456-1" [showClearButton]="true"></dx-text-box>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>Tipo de persona <span class="text-danger">*</span></label>
+                <dx-select-box
+                  [items]="tiposPersona"
+                  displayExpr="label"
+                  valueExpr="value"
+                  [value]="proveedor.tipo_persona"
+                  (valueChange)="proveedor.tipo_persona = $event"
+                  placeholder="Seleccione..."
+                ></dx-select-box>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>Razón social <span class="text-danger">*</span></label>
+                <dx-text-box [value]="proveedor.razon_social ?? ''" (valueChange)="proveedor.razon_social = $event" placeholder="Razón social oficial..." [showClearButton]="true"></dx-text-box>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>Nombre comercial</label>
+                <dx-text-box [value]="proveedor.nombre_comercial ?? ''" (valueChange)="proveedor.nombre_comercial = $event" placeholder="Nombre con el que se conoce..." [showClearButton]="true"></dx-text-box>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>País <span class="text-danger">*</span></label>
+                <dx-select-box
+                  [items]="paises"
+                  [(value)]="proveedor.pais"
+                  (onValueChanged)="onPaisChange($event.value)"
+                  placeholder="Seleccioná país..."
+                ></dx-select-box>
+              </div>
+            </div>
+            <div class="col-md-2">
+              <div class="form-group">
+                <label>Idioma</label>
+                <div class="mt-2">
+                  <span class="badge badge-lg p-2"
+                    [class.badge-primary]="proveedor.idioma === 'ES'"
+                    [class.badge-info]="proveedor.idioma === 'EN'">
+                    {{ proveedor.idioma === 'ES' ? 'Español (ES)' : 'Inglés (EN)' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>Estado</label>
+                <dx-select-box
+                  [items]="estadosOptions"
+                  displayExpr="nombre"
+                  valueExpr="id"
+                  [(value)]="proveedor.estado"
+                ></dx-select-box>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>Sitio web</label>
+                <dx-text-box [value]="proveedor.sitio_web ?? ''" (valueChange)="proveedor.sitio_web = $event" placeholder="https://..." [showClearButton]="true"></dx-text-box>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-8">
+              <div class="form-group">
+                <label>Etiquetas</label>
+                <dx-tag-box
+                  [items]="etiquetas"
+                  displayExpr="nombre"
+                  valueExpr="id"
+                  [(value)]="etiquetasSeleccionadas"
+                  placeholder="Seleccioná etiquetas..."
+                  [showSelectionControls]="true"
+                  [searchEnabled]="true"
+                ></dx-tag-box>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-5">
+              <div class="form-group">
+                <label>Monedas aceptadas</label>
+                <dx-tag-box
+                  [items]="monedasOptions"
+                  [value]="proveedor.monedas ?? []"
+                  (valueChange)="proveedor.monedas = $any($event)"
+                  placeholder="COP, USD, EUR..."
+                  [showSelectionControls]="true"
+                ></dx-tag-box>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group">
+                <label>Moneda por defecto</label>
+                <dx-select-box
+                  [items]="monedasDefectoOptions"
+                  [value]="proveedor.moneda_defecto"
+                  (valueChange)="proveedor.moneda_defecto = $event"
+                  placeholder="Seleccioná..."
+                  [showClearButton]="true"
+                ></dx-select-box>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>Calificación del proveedor</label>
+                <div class="d-flex align-items-center">
+                  <div class="rating-stars" (mouseleave)="calificacionHover = 0">
+                    @for (n of estrellas; track n) {
+                      <i
+                        class="fa-star"
+                        [class.fas]="estrellaLlena(n)"
+                        [class.far]="!estrellaLlena(n)"
+                        (mouseenter)="calificacionHover = n"
+                        (click)="setCalificacion(n)"
+                        [title]="n + ' de 10'"
+                      ></i>
+                    }
+                  </div>
+                  <span class="badge badge-warning ml-2" style="font-size:13px;">
+                    {{ (proveedor.calificacion ?? 0) | number:'1.0-1' }} / 10
+                  </span>
+                  @if ((proveedor.calificacion ?? 0) > 0) {
+                    <button type="button" class="btn btn-link btn-sm text-muted p-0 ml-2"
+                            (click)="proveedor.calificacion = 0" title="Limpiar calificación">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  }
+                </div>
+                <small class="text-muted">Ranking histórico usado en el comparativo (0 a 10).</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notas</label>
+            <dx-text-box [value]="proveedor.notas ?? ''" (valueChange)="proveedor.notas = $event" placeholder="Observaciones del proveedor..." [showClearButton]="true"></dx-text-box>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Contactos -->
+      <div class="card">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1"><i class="fas fa-address-book mr-2"></i>Contactos</h3>
+          <button class="btn btn-success btn-sm" (click)="agregarContacto()">
+            <i class="fas fa-plus mr-1"></i>Agregar contacto
+          </button>
+        </div>
+        <div class="card-body">
+
+          @if (contactos.length === 0) {
+            <div class="text-center text-muted py-3">
+              <i class="fas fa-user-slash fa-2x mb-2"></i>
+              <p>No hay contactos. Agregá el primero.</p>
+            </div>
+          }
+
+          @for (contacto of contactos; track $index; let ci = $index) {
+            <div class="card card-outline mb-3" [class.card-success]="contacto.es_principal">
+              <!-- Header del contacto -->
+              <div class="card-header d-flex align-items-center" style="cursor:pointer" (click)="toggleContacto(ci)">
+                <div class="flex-grow-1">
+                  <strong>{{ contacto.nombre || 'Contacto ' + (ci + 1) }}</strong>
+                  @if (contacto.cargo) {
+                    <span class="text-muted ml-2">— {{ contacto.cargo }}</span>
+                  }
+                  @if (contacto.es_principal) {
+                    <span class="badge badge-success ml-2">Principal</span>
+                  }
+                </div>
+                <button class="btn btn-xs btn-outline-danger mr-2" (click)="eliminarContacto(ci); $event.stopPropagation()" title="Eliminar contacto">
+                  <i class="fas fa-trash"></i>
+                </button>
+                <i class="fas" [class.fa-chevron-up]="contacto.expandido" [class.fa-chevron-down]="!contacto.expandido"></i>
+              </div>
+
+              @if (contacto.expandido) {
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-5">
+                      <div class="form-group">
+                        <label>Nombre <span class="text-danger">*</span></label>
+                        <dx-text-box [value]="contacto.nombre ?? ''" (valueChange)="contacto.nombre = $event" placeholder="Nombre completo..." [showClearButton]="true"></dx-text-box>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="form-group">
+                        <label>Cargo</label>
+                        <dx-text-box [value]="contacto.cargo ?? ''" (valueChange)="contacto.cargo = $event" placeholder="Ej: Gerente comercial..." [showClearButton]="true"></dx-text-box>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="form-group d-flex align-items-center mt-4">
+                        <label class="mr-2 mb-0">Contacto principal</label>
+                        <dx-switch [value]="contacto.es_principal ?? false" (valueChange)="contacto.es_principal = $event"></dx-switch>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Emails -->
+                  <div class="mt-2">
+                    <div class="d-flex align-items-center mb-2">
+                      <h6 class="mb-0 flex-grow-1"><i class="fas fa-envelope mr-1 text-primary"></i>Correos electrónicos</h6>
+                      <button class="btn btn-xs btn-outline-primary" (click)="agregarEmail(ci)">
+                        <i class="fas fa-plus mr-1"></i>Agregar email
+                      </button>
+                    </div>
+
+                    @if (contacto.emails.length === 0) {
+                      <p class="text-muted small mb-2">Sin emails registrados.</p>
+                    }
+
+                    @for (email of contacto.emails; track $index; let ei = $index) {
+                      <div class="row align-items-center mb-2">
+                        <div class="col-md-5">
+                          <dx-text-box [(value)]="email.email" placeholder="correo@empresa.com" [showClearButton]="true"></dx-text-box>
+                        </div>
+                        <div class="col-md-3">
+                          <dx-select-box [items]="tiposEmail" displayExpr="nombre" valueExpr="id" [(value)]="email.tipo" placeholder="Tipo..."></dx-select-box>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center">
+                          <label class="mr-2 mb-0 small">Principal</label>
+                          <dx-switch [(value)]="email.es_principal"></dx-switch>
+                        </div>
+                        <div class="col-md-1">
+                          <button class="btn btn-xs btn-outline-danger" (click)="eliminarEmail(ci, ei)" title="Eliminar">
+                            <i class="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Teléfonos -->
+                  <div class="mt-3">
+                    <div class="d-flex align-items-center mb-2">
+                      <h6 class="mb-0 flex-grow-1"><i class="fas fa-phone mr-1 text-success"></i>Teléfonos</h6>
+                      <button class="btn btn-xs btn-outline-success" (click)="agregarTelefono(ci)">
+                        <i class="fas fa-plus mr-1"></i>Agregar teléfono
+                      </button>
+                    </div>
+
+                    @if (contacto.telefonos.length === 0) {
+                      <p class="text-muted small mb-2">Sin teléfonos registrados.</p>
+                    }
+
+                    @for (tel of contacto.telefonos; track $index; let ti = $index) {
+                      <div class="row align-items-center mb-2">
+                        <div class="col-md-4">
+                          <dx-text-box [(value)]="tel.numero" placeholder="Número..." [showClearButton]="true"></dx-text-box>
+                        </div>
+                        <div class="col-md-3">
+                          <dx-select-box [items]="tiposTelefono" displayExpr="nombre" valueExpr="id" [(value)]="tel.tipo" placeholder="Tipo..."></dx-select-box>
+                        </div>
+                        <div class="col-md-3">
+                          <dx-text-box [value]="tel.extension ?? ''" (valueChange)="tel.extension = $event" placeholder="Ext. (opcional)" [showClearButton]="true"></dx-text-box>
+                        </div>
+                        <div class="col-md-2">
+                          <button class="btn btn-xs btn-outline-danger" (click)="eliminarTelefono(ci, ti)" title="Eliminar">
+                            <i class="fas fa-times"></i>
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="d-flex justify-content-end mb-4">
+        <button class="btn btn-secondary mr-2" (click)="cancelar()">
+          <i class="fas fa-times mr-1"></i>Cancelar
+        </button>
+        <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando">
+          @if (guardando) {
+            <i class="fas fa-spinner fa-spin mr-1"></i>Guardando...
+          } @else {
+            <i class="fas fa-save mr-1"></i>Guardar proveedor
+          }
+        </button>
+      </div>
+
+    }
+  </div>
+</div>

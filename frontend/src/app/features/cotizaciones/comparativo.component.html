@@ -1,0 +1,257 @@
+<!-- content-header -->
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Comparativo de cotizaciones</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/cotizaciones']">Cotizaciones</a></li>
+          <li class="breadcrumb-item active">Comparativo</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger"><i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}</div>
+    }
+    @if (cargando) {
+      <div class="d-flex justify-content-center py-5"><dx-load-indicator [visible]="true"></dx-load-indicator></div>
+    }
+
+    @if (!cargando && solicitud) {
+
+      <!-- Info de la oportunidad -->
+      <div class="card mb-3">
+        <div class="card-body py-2">
+          <div class="row align-items-center">
+            <div class="col-md-8">
+              <strong>Oportunidad:</strong> {{ solicitud.titulo }}
+              &nbsp;&mdash;&nbsp;
+              <strong>Solicitante:</strong> {{ solicitud.solicitante_nombre }}
+            </div>
+            <div class="col-md-4 text-right">
+              <a [routerLink]="['/solicitudes', solicitud.id]" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left mr-1"></i>Volver a la oportunidad
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (exito) {
+        <div class="alert alert-success"><i class="fas fa-check-circle mr-2"></i>{{ exito }}</div>
+      }
+
+      @if (cotizaciones.length === 0) {
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle mr-2"></i>No hay respuestas de proveedores aún.
+        </div>
+      } @else {
+
+        <!-- ===== Adjudicación por ítem ===== -->
+        <div class="card card-primary card-outline mb-3">
+          <div class="card-header d-flex align-items-center">
+            <h3 class="card-title mb-0">
+              <i class="fas fa-clipboard-check text-primary mr-1"></i>Adjudicación por ítem
+            </h3>
+            <div class="ml-auto">
+              <button class="btn btn-sm btn-outline-primary mr-1" (click)="usarSugerencia()">
+                <i class="fas fa-magic mr-1"></i>Usar sugerencia del sistema
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="limpiarAdjudicacion()">
+                <i class="fas fa-eraser mr-1"></i>Limpiar
+              </button>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-bordered table-sm mb-0 comparativo-adj">
+                <thead>
+                  <tr>
+                    <th class="bg-light" style="min-width:200px;">Ítem</th>
+                    <th class="bg-light text-right" style="width:60px;">Cant.</th>
+                    @for (cot of cotizacionesRankeadas; track cot.id) {
+                      <th class="text-center" style="min-width:170px;">
+                        {{ cot.proveedor?.razon_social ?? ('Prov. #' + cot.proveedor_id) }}
+                      </th>
+                    }
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of itemsSolicitud; track item.id) {
+                    <tr>
+                      <td>
+                        <span class="badge mr-1 badge-secondary">{{ item.tipo }}</span>
+                        {{ item.descripcion }}
+                        @if (adjudicacion[item.id] == null) {
+                          <span class="badge badge-warning ml-1" title="Ítem sin adjudicar">sin adjudicar</span>
+                        }
+                      </td>
+                      <td class="text-right text-muted">{{ item.cantidad ?? 1 }}</td>
+                      @for (cot of cotizacionesRankeadas; track cot.id) {
+                        <td class="text-center align-middle adj-cell"
+                            [class.oferta]="ofertaItem(item.id, cot.id)"
+                            [class.adjudicado]="esAdjudicado(item.id, cot.id)"
+                            (click)="adjudicarItem(item.id, cot.id)"
+                            [title]="ofertaItem(item.id, cot.id) ? 'Clic para adjudicar este ítem a este proveedor' : 'No oferta este ítem'">
+                          @if (ofertaItem(item.id, cot.id)) {
+                            <div class="font-weight-bold">
+                              {{ getCandidato(item.id, cot.id)?.precio_unitario | number:'1.2-2' }}
+                              @if (esMejorItem(item.id, cot.id)) {
+                                <i class="fas fa-star text-warning ml-1" title="Mejor opción para este ítem"></i>
+                              }
+                            </div>
+                            <div class="small text-muted">
+                              {{ getCandidato(item.id, cot.id)?.tiempo_entrega_dias ?? '—' }} días ·
+                              pje {{ getCandidato(item.id, cot.id)?.puntaje | number:'1.0-0' }}
+                            </div>
+                            @if (esAdjudicado(item.id, cot.id)) {
+                              <span class="badge badge-success mt-1"><i class="fas fa-check"></i> Adjudicado</span>
+                            } @else {
+                              <span class="text-primary small select-hint">Adjudicar</span>
+                            }
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-footer text-muted small">
+            <i class="fas fa-star text-warning"></i> = mejor opción del ítem (comparando solo a quienes lo ofertan).
+            Hacé clic en una celda con precio para adjudicar ese ítem a ese proveedor. La compra puede repartirse.
+          </div>
+        </div>
+
+        <!-- ===== Resumen de la adjudicación ===== -->
+        <div class="card mb-3">
+          <div class="card-header"><h3 class="card-title"><i class="fas fa-receipt mr-1"></i>Resumen de la adjudicación</h3></div>
+          <div class="card-body">
+            @if (itemsSinAdjudicar > 0) {
+              <div class="alert alert-warning py-2">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Hay <strong>{{ itemsSinAdjudicar }}</strong> ítem(s) sin adjudicar.
+              </div>
+            }
+            @if (resumenPorProveedor.length > 0) {
+              <table class="table table-sm w-auto">
+                <thead class="thead-light">
+                  <tr><th>Proveedor</th><th class="text-right">Ítems</th><th class="text-right">Subtotal</th></tr>
+                </thead>
+                <tbody>
+                  @for (r of resumenPorProveedor; track r.cotizacionId) {
+                    <tr>
+                      <td>{{ r.nombre }}</td>
+                      <td class="text-right">{{ r.items }}</td>
+                      <td class="text-right">{{ r.subtotal | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                  <tr class="font-weight-bold border-top">
+                    <td>TOTAL ADJUDICADO</td>
+                    <td class="text-right">{{ itemsAdjudicados }}</td>
+                    <td class="text-right">{{ totalAdjudicado | number:'1.2-2' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            } @else {
+              <p class="text-muted mb-0">Todavía no adjudicaste ningún ítem.</p>
+            }
+
+            <div class="form-group mt-2 mb-2">
+              <label class="small font-weight-bold text-muted text-uppercase">Justificación de la adjudicación</label>
+              <textarea class="form-control form-control-sm" rows="2" [(ngModel)]="justificacion"
+                        placeholder="Motivo de la adjudicación (opcional pero recomendado)..."></textarea>
+            </div>
+            <button class="btn btn-primary" [disabled]="guardando || itemsAdjudicados === 0" (click)="guardarAdjudicacion()">
+              @if (guardando) { <span class="spinner-border spinner-border-sm mr-1"></span> }
+              <i class="fas fa-save mr-1"></i>Guardar adjudicación
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== Ranking global (referencia) ===== -->
+        @if (evaluacion) {
+          <div class="card card-secondary card-outline">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fas fa-trophy text-warning mr-1"></i>Ranking global de proveedores (referencia)</h3>
+              <div class="card-tools">
+                <span class="text-muted small">Pesos:</span>
+                @for (c of criteriosActivos; track c.clave) {
+                  <span class="badge badge-light border ml-1" [title]="c.descripcion">{{ c.nombre }} {{ c.peso }}%</span>
+                }
+              </div>
+            </div>
+            <div class="card-body">
+              <p class="text-muted small">
+                Puntaje global de cada proveedor si se le adjudicara <strong>toda</strong> la oportunidad.
+                El financiero se promedia sobre todos los ítems (los que no oferta cuentan 0), por eso los proveedores incompletos quedan penalizados.
+              </p>
+              <div class="row">
+                @for (cot of cotizacionesRankeadas; track cot.id) {
+                  <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="card h-100 mb-0" [class.border-warning]="esGanadorSugerido(cot.id)"
+                         [style.border-width.px]="esGanadorSugerido(cot.id) ? 2 : 1">
+                      <div class="card-body p-3">
+                        <div class="d-flex align-items-start justify-content-between mb-2">
+                          <div>
+                            <span class="badge badge-dark mr-1">#{{ getRankingPos(cot.id) }}</span>
+                            <strong>{{ cot.proveedor?.razon_social ?? ('Prov. #' + cot.proveedor_id) }}</strong>
+                          </div>
+                          <div class="text-right">
+                            <div class="h4 mb-0 font-weight-bold"
+                                 [class.text-success]="getPuntajeFinal(cot.id)! >= 75"
+                                 [class.text-info]="getPuntajeFinal(cot.id)! >= 50 && getPuntajeFinal(cot.id)! < 75">
+                              {{ getPuntajeFinal(cot.id) | number:'1.0-1' }}
+                            </div>
+                            <small class="text-muted">/ 100</small>
+                          </div>
+                        </div>
+                        @if (esGanadorSugerido(cot.id)) {
+                          <div class="mb-2"><span class="badge badge-warning"><i class="fas fa-star mr-1"></i>Mejor global</span></div>
+                        }
+                        @for (c of criteriosActivos; track c.clave) {
+                          <div class="mb-1">
+                            <div class="d-flex justify-content-between small">
+                              <span class="text-muted">{{ c.nombre }} <span class="text-black-50">({{ c.peso }}%)</span></span>
+                              <span class="font-weight-bold">{{ getSubpuntaje(cot.id, c.clave) | number:'1.0-1' }}</span>
+                            </div>
+                            <div class="progress" style="height:6px;">
+                              <div class="progress-bar" [ngClass]="barraClass(getSubpuntaje(cot.id, c.clave))"
+                                   [style.width.%]="getSubpuntaje(cot.id, c.clave) ?? 0"></div>
+                            </div>
+                          </div>
+                        }
+                        <div class="text-muted small mt-2 border-top pt-2">
+                          Total: <strong>{{ getResultado(cot.id)?.total | number:'1.0-0' }}</strong> ·
+                          Ítems: {{ getResultado(cot.id)?.items_disponibles }}/{{ getResultado(cot.id)?.items_totales }} ·
+                          ★ {{ getResultado(cot.id)?.calificacion | number:'1.0-1' }}/10
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary btn-block mt-2" (click)="adjudicarTodoA(cot.id)">
+                          <i class="fas fa-clipboard-list mr-1"></i>Adjudicar todo a este proveedor
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+      }
+    }
+
+  </div>
+</div>

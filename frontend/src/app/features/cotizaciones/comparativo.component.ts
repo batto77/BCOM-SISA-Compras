@@ -1,0 +1,207 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { DxLoadIndicatorModule } from 'devextreme-angular';
+
+import { CotizacionesService } from '../../core/services/cotizaciones.service';
+import {
+  ComparativoOut,
+  CotizacionOut,
+  EvaluacionComparativo,
+  EvaluacionResultado,
+  EvaluacionCriterio,
+  EvaluacionPorItem,
+  EvaluacionItemCandidato,
+} from '../../core/models/cotizaciones.model';
+
+@Component({
+  selector: 'app-comparativo',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink, DxLoadIndicatorModule],
+  templateUrl: './comparativo.component.html',
+})
+export class ComparativoComponent implements OnInit {
+  datos: ComparativoOut | null = null;
+  cargando = false;
+  error = '';
+
+  solicitudId = 0;
+  justificacion = '';
+  guardando = false;
+  exito = '';
+
+  // Adjudicación por ítem editada por el usuario: { item_solicitud_id: cotizacion_id | null }
+  adjudicacion: Record<number, number | null> = {};
+
+  get solicitud() { return this.datos?.solicitud ?? null; }
+  get itemsSolicitud() { return this.datos?.items_solicitud ?? []; }
+  get evaluacion(): EvaluacionComparativo | null { return this.datos?.evaluacion ?? null; }
+  get criterios(): EvaluacionCriterio[] { return this.evaluacion?.criterios ?? []; }
+  get criteriosActivos(): EvaluacionCriterio[] { return this.criterios.filter(c => c.activo); }
+  get porItem(): EvaluacionPorItem[] { return this.evaluacion?.por_item ?? []; }
+  get ganadorSugeridoId(): number | null { return this.evaluacion?.ganador_sugerido_cotizacion_id ?? null; }
+
+  get cotizaciones(): CotizacionOut[] {
+    return (this.datos?.cotizaciones ?? []).filter(c => c.estado === 'respondida');
+  }
+
+  get cotizacionesRankeadas(): CotizacionOut[] {
+    const orden = new Map<number, number>();
+    (this.evaluacion?.resultados ?? []).forEach(r => orden.set(r.cotizacion_id, r.puntaje_final));
+    return [...this.cotizaciones].sort(
+      (a, b) => (orden.get(b.id) ?? -1) - (orden.get(a.id) ?? -1),
+    );
+  }
+
+  constructor(
+    private route: ActivatedRoute,
+    private cotizacionesService: CotizacionesService,
+  ) {}
+
+  ngOnInit(): void {
+    this.solicitudId = Number(this.route.snapshot.paramMap.get('solicitudId'));
+    if (this.solicitudId) {
+      this.cargar(this.solicitudId);
+    }
+  }
+
+  cargar(solicitudId: number): void {
+    this.cargando = true;
+    this.error = '';
+    this.cotizacionesService.getComparativo(solicitudId).subscribe({
+      next: data => {
+        this.datos = data;
+        this.justificacion = data?.justificacion_seleccion ?? '';
+        // Adjudicación guardada; si no hay, se parte de la sugerida
+        const guardada = data?.adjudicacion_items ?? {};
+        this.adjudicacion = {};
+        for (const item of this.itemsSolicitud) {
+          const g = guardada[String(item.id)];
+          const sug = this.evaluacion?.adjudicacion_sugerida?.[String(item.id)] ?? null;
+          this.adjudicacion[item.id] = g != null ? g : (sug ?? null);
+        }
+        this.cargando = false;
+      },
+      error: () => {
+        this.error = 'No se pudo cargar el comparativo.';
+        this.cargando = false;
+      },
+    });
+  }
+
+  // --- Evaluación global ---
+  getResultado(cotizacionId: number): EvaluacionResultado | null {
+    return this.evaluacion?.resultados.find(r => r.cotizacion_id === cotizacionId) ?? null;
+  }
+  getSubpuntaje(cotizacionId: number, clave: string): number | null {
+    const r = this.getResultado(cotizacionId);
+    return r ? ((r.subpuntajes as Record<string, number>)[clave] ?? null) : null;
+  }
+  getPuntajeFinal(cotizacionId: number): number | null {
+    return this.getResultado(cotizacionId)?.puntaje_final ?? null;
+  }
+  getRankingPos(cotizacionId: number): number {
+    return this.cotizacionesRankeadas.findIndex(c => c.id === cotizacionId) + 1;
+  }
+  esGanadorSugerido(cotizacionId: number): boolean {
+    return this.ganadorSugeridoId === cotizacionId;
+  }
+  barraClass(valor: number | null): string {
+    if (valor === null) return 'bg-secondary';
+    if (valor >= 75) return 'bg-success';
+    if (valor >= 50) return 'bg-info';
+    if (valor >= 25) return 'bg-warning';
+    return 'bg-danger';
+  }
+
+  // --- Adjudicación por ítem ---
+  getItemEval(itemSolicitudId: number): EvaluacionPorItem | null {
+    return this.porItem.find(p => p.item_solicitud_id === itemSolicitudId) ?? null;
+  }
+  getCandidato(itemSolicitudId: number, cotizacionId: number): EvaluacionItemCandidato | null {
+    return this.getItemEval(itemSolicitudId)?.candidatos.find(c => c.cotizacion_id === cotizacionId) ?? null;
+  }
+  ofertaItem(itemSolicitudId: number, cotizacionId: number): boolean {
+    return !!this.getCandidato(itemSolicitudId, cotizacionId);
+  }
+  esMejorItem(itemSolicitudId: number, cotizacionId: number): boolean {
+    return this.getItemEval(itemSolicitudId)?.mejor_cotizacion_id === cotizacionId;
+  }
+  esAdjudicado(itemSolicitudId: number, cotizacionId: number): boolean {
+    return this.adjudicacion[itemSolicitudId] === cotizacionId;
+  }
+  adjudicarItem(itemSolicitudId: number, cotizacionId: number): void {
+    if (!this.ofertaItem(itemSolicitudId, cotizacionId)) return;
+    // Clic sobre el ya adjudicado lo deselecciona
+    this.adjudicacion[itemSolicitudId] =
+      this.adjudicacion[itemSolicitudId] === cotizacionId ? null : cotizacionId;
+  }
+  usarSugerencia(): void {
+    for (const item of this.itemsSolicitud) {
+      this.adjudicacion[item.id] = this.evaluacion?.adjudicacion_sugerida?.[String(item.id)] ?? null;
+    }
+  }
+  adjudicarTodoA(cotizacionId: number): void {
+    for (const item of this.itemsSolicitud) {
+      this.adjudicacion[item.id] = this.ofertaItem(item.id, cotizacionId) ? cotizacionId : null;
+    }
+  }
+  limpiarAdjudicacion(): void {
+    for (const item of this.itemsSolicitud) this.adjudicacion[item.id] = null;
+  }
+
+  get itemsAdjudicados(): number {
+    return this.itemsSolicitud.filter(i => this.adjudicacion[i.id] != null).length;
+  }
+  get itemsSinAdjudicar(): number {
+    return this.itemsSolicitud.length - this.itemsAdjudicados;
+  }
+
+  // Resumen: qué proveedores participan y con cuántos ítems / subtotal
+  get resumenPorProveedor(): Array<{ cotizacionId: number; nombre: string; items: number; subtotal: number }> {
+    const map = new Map<number, { items: number; subtotal: number }>();
+    for (const item of this.itemsSolicitud) {
+      const cid = this.adjudicacion[item.id];
+      if (cid == null) continue;
+      const cand = this.getCandidato(item.id, cid);
+      const acc = map.get(cid) ?? { items: 0, subtotal: 0 };
+      acc.items += 1;
+      acc.subtotal += cand?.subtotal ?? 0;
+      map.set(cid, acc);
+    }
+    return [...map.entries()].map(([cotizacionId, v]) => ({
+      cotizacionId,
+      nombre: this.getProveedorNombre(cotizacionId),
+      items: v.items,
+      subtotal: v.subtotal,
+    }));
+  }
+  get totalAdjudicado(): number {
+    return this.resumenPorProveedor.reduce((a, r) => a + r.subtotal, 0);
+  }
+
+  getProveedorNombre(cotizacionId: number): string {
+    const cot = this.cotizaciones.find(c => c.id === cotizacionId);
+    return cot?.proveedor?.razon_social ?? ('Prov. #' + (cot?.proveedor_id ?? ''));
+  }
+
+  guardarAdjudicacion(): void {
+    this.guardando = true;
+    this.error = '';
+    this.exito = '';
+    this.cotizacionesService
+      .adjudicar(this.solicitudId, this.adjudicacion, this.justificacion || undefined)
+      .subscribe({
+        next: () => {
+          this.guardando = false;
+          this.exito = 'Adjudicación guardada correctamente.';
+          setTimeout(() => (this.exito = ''), 4000);
+        },
+        error: () => {
+          this.error = 'No se pudo guardar la adjudicación.';
+          this.guardando = false;
+        },
+      });
+  }
+}

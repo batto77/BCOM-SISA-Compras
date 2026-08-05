@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>SISA Compras – Asistente de Cotización</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1e293b;font-size:14px}
+
+/* ── TOP BAR ── */
+.topbar{background:#1e3a5f;color:#fff;display:flex;align-items:center;gap:12px;padding:0 24px;height:52px}
+.topbar-logo{font-weight:700;font-size:16px;letter-spacing:.5px}
+.topbar-sep{opacity:.3;font-size:20px}
+.topbar-title{opacity:.85;font-size:13px}
+
+/* ── WIZARD STEPS ── */
+.steps-bar{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;display:flex;align-items:center;gap:0}
+.step{display:flex;align-items:center;gap:8px;padding:16px 20px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;color:#64748b;font-size:13px;font-weight:500}
+.step.active{color:#1e3a5f;border-bottom-color:#1e3a5f}
+.step.done{color:#059669;border-bottom-color:transparent}
+.step-num{width:22px;height:22px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.step.active .step-num{background:#1e3a5f;color:#fff}
+.step.done .step-num{background:#059669;color:#fff}
+.step-arrow{color:#cbd5e1;margin:0 4px;font-size:12px}
+
+/* ── LAYOUT ── */
+.layout{display:flex;gap:20px;padding:20px 24px;max-width:1400px;margin:0 auto}
+.main{flex:1;min-width:0}
+.sidebar{width:280px;flex-shrink:0}
+
+/* ── CARD ── */
+.card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:16px;overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f1f5f9}
+.card-head-left{display:flex;align-items:center;gap:8px}
+.card-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.card-icon.blue{background:#dbeafe}
+.card-icon.green{background:#d1fae5}
+.card-icon.purple{background:#ede9fe}
+.card-title{font-weight:600;font-size:14px;color:#1e293b}
+.card-body{padding:18px}
+
+/* ── HEADER FORM ── */
+.header-grid{display:grid;grid-template-columns:160px 1fr 200px 180px;gap:12px;align-items:end}
+.header-grid-2{display:grid;grid-template-columns:1fr 1fr 160px 160px;gap:12px;margin-top:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+.field input,.field select,.field textarea{border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;color:#1e293b;background:#fff;transition:border .15s}
+.field input:focus,.field select:focus{outline:none;border-color:#3b82f6}
+.opp-input{font-weight:700;font-size:15px;color:#1e3a5f;letter-spacing:.5px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge.urgente{background:#fee2e2;color:#dc2626}
+.badge.presupuestaria{background:#fef3c7;color:#92400e}
+.badge.inmediata{background:#d1fae5;color:#065f46}
+
+/* ── SECTION TABS ── */
+.section-tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:16px}
+.stab{padding:9px 18px;cursor:pointer;font-size:13px;font-weight:500;color:#64748b;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;display:flex;align-items:center;gap:6px}
+.stab.active{color:#1e3a5f;border-bottom-color:#1e3a5f;font-weight:600}
+.stab .cnt{background:#e2e8f0;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700}
+.stab.active .cnt{background:#1e3a5f;color:#fff}
+
+/* ── MATRIX TABLE ── */
+.matrix{width:100%;border-collapse:collapse}
+.matrix th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.matrix td{padding:0;border-bottom:1px solid #f1f5f9;vertical-align:top}
+.matrix tr.item-row:hover{background:#fafafa}
+.matrix tr.item-row.expanded{background:#f8fbff}
+
+/* ── ITEM ROW ── */
+.cell{padding:8px 8px}
+.cell-num{text-align:center;color:#94a3b8;font-size:12px;font-weight:600;padding-top:12px}
+.cell select,.cell input[type=text],.cell input[type=number]{width:100%;border:1px solid #e2e8f0;border-radius:5px;padding:6px 8px;font-size:13px;background:#fff;color:#1e293b}
+.cell select:focus,.cell input:focus{outline:none;border-color:#3b82f6}
+
+/* ── MODE TOGGLE ── */
+.mode-toggle{display:flex;gap:0;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;font-size:11px;font-weight:600}
+.mode-btn{padding:5px 10px;cursor:pointer;color:#64748b;transition:all .15s;white-space:nowrap}
+.mode-btn.active{background:#1e3a5f;color:#fff}
+
+/* ── CONDITION SELECT ── */
+.cond-select{padding:5px 8px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;background:#fff}
+.cond-select option[value=Nuevo]{color:#059669}
+.cond-select option[value=RFB]{color:#d97706}
+
+/* ── EXPAND BUTTON ── */
+.expand-btn{background:none;border:none;cursor:pointer;color:#3b82f6;font-size:11px;font-weight:600;display:flex;align-items:center;gap:3px;padding:4px 6px;border-radius:4px;white-space:nowrap}
+.expand-btn:hover{background:#eff6ff}
+.expand-btn .arrow{transition:transform .2s}
+.expand-btn.open .arrow{transform:rotate(90deg)}
+
+/* ── SPEC PANEL ── */
+.spec-panel{display:none;background:#f8fbff;border-top:1px solid #dbeafe;padding:14px 16px}
+.spec-panel.open{display:block}
+.spec-panel-inner{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.spec-field{display:flex;flex-direction:column;gap:3px}
+.spec-field label{font-size:10px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.4px}
+.spec-field input,.spec-field select{border:1px solid #dbeafe;border-radius:4px;padding:5px 8px;font-size:12px;background:#fff}
+.spec-field input:focus,.spec-field select:focus{outline:none;border-color:#3b82f6}
+.spec-section-title{font-size:10px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;margin-top:10px;grid-column:1/-1;border-bottom:1px solid #dbeafe;padding-bottom:4px}
+.spec-full{grid-column:1/-1}
+.spec-half{grid-column:span 2}
+.variant-b{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12px;color:#92400e}
+.variant-b input[type=checkbox]{width:14px;height:14px;accent-color:#d97706}
+
+/* ── ALT MODELS ── */
+.alt-models-area{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.alt-model-row{display:flex;gap:6px;align-items:center}
+.alt-model-row input{flex:1;border:1px solid #e2e8f0;border-radius:5px;padding:5px 8px;font-size:12px}
+.alt-model-row .rm-btn{background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;padding:2px 6px}
+.add-alt-btn{background:none;border:1px dashed #3b82f6;color:#3b82f6;border-radius:5px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;align-self:flex-start}
+
+/* ── ADD ITEM ── */
+.add-item-row td{padding:10px 8px}
+.add-item-btn{background:none;border:1px dashed #94a3b8;color:#64748b;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px}
+.add-item-btn:hover{border-color:#3b82f6;color:#3b82f6;background:#eff6ff}
+.delete-btn{background:none;border:none;cursor:pointer;color:#cbd5e1;padding:4px 6px;border-radius:4px;font-size:15px}
+.delete-btn:hover{color:#ef4444;background:#fee2e2}
+
+/* ── SIDEBAR ── */
+.summary-box{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:16px;margin-bottom:14px}
+.summary-title{font-size:12px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.summary-item{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px}
+.summary-item:last-child{border-bottom:none}
+.summary-item-label{color:#64748b;flex:1}
+.summary-item-val{font-weight:600;color:#1e293b;text-align:right;max-width:120px}
+.summary-badge{display:inline-flex;align-items:center;gap:3px;background:#dbeafe;color:#1e3a5f;border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700}
+
+.providers-box{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:16px}
+.providers-title{font-size:12px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.provider-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc;font-size:12px}
+.provider-row:last-child{border-bottom:none}
+.provider-row input[type=checkbox]{accent-color:#1e3a5f;width:13px;height:13px}
+.provider-name{flex:1;font-weight:500}
+.provider-cat{font-size:10px;color:#94a3b8}
+.provider-lang{font-size:10px;background:#f1f5f9;border-radius:3px;padding:1px 4px;color:#475569}
+
+/* ── BOTTOM BAR ── */
+.bottom-bar{position:sticky;bottom:0;background:#fff;border-top:1px solid #e2e8f0;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+.bottom-bar-left{display:flex;align-items:center;gap:10px;font-size:12px;color:#64748b}
+.btn{padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-secondary{background:#f1f5f9;color:#475569}
+.btn-secondary:hover{background:#e2e8f0}
+.btn-primary{background:#1e3a5f;color:#fff}
+.btn-primary:hover{background:#162d4a}
+.btn-success{background:#059669;color:#fff}
+.btn-danger{background:#dc2626;color:#fff}
+
+/* ── TOOLTIP ── */
+.tooltip-wrap{position:relative;display:inline-flex}
+.tooltip-wrap:hover .tooltip{display:block}
+.tooltip{display:none;position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;white-space:nowrap;z-index:100}
+
+/* ── INFO PILL ── */
+.info-pill{display:inline-flex;align-items:center;gap:4px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600}
+
+/* ── STEP CONTENT ── */
+.step-content{display:none}
+.step-content.active{display:block}
+
+/* ── SERVICES & SOFTWARE ── */
+.service-matrix th,.sw-matrix th{background:#f8fafc}
+.empty-state{text-align:center;padding:32px;color:#94a3b8;font-size:13px}
+.empty-state .es-icon{font-size:32px;margin-bottom:8px}
+
+/* ── DISPATCH STEP ── */
+.dispatch-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.prov-filter{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.prov-filter-btn{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #e2e8f0;background:#fff;color:#475569}
+.prov-filter-btn.on{background:#1e3a5f;color:#fff;border-color:#1e3a5f}
+.email-preview{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:12px;font-size:12px;color:#334155;line-height:1.6;max-height:260px;overflow-y:auto;white-space:pre-wrap;font-family:monospace}
+.email-meta{display:flex;gap:12px;margin-bottom:10px;font-size:12px}
+.email-meta span{display:flex;gap:4px;align-items:center}
+.email-meta b{color:#1e293b}
+.lang-switch{display:flex;gap:6px;margin-bottom:10px}
+.lang-btn{padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #e2e8f0}
+.lang-btn.on{background:#1e3a5f;color:#fff}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%}
+  .header-grid,.header-grid-2{grid-template-columns:1fr 1fr}
+  .spec-panel-inner{grid-template-columns:1fr 1fr}
+  .dispatch-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <span class="topbar-logo">SISA Compras</span>
+  <span class="topbar-sep">|</span>
+  <span class="topbar-title">Asistente de Cotización</span>
+</div>
+
+<!-- WIZARD STEPS -->
+<div class="steps-bar">
+  <div class="step done" onclick="goStep(1)">
+    <div class="step-num">✓</div> Encabezado
+  </div>
+  <span class="step-arrow">›</span>
+  <div class="step active" onclick="goStep(2)" id="stab2">
+    <div class="step-num">2</div> Productos
+    <span class="cnt" id="cnt-prod" style="background:#1e3a5f;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">2</span>
+  </div>
+  <span class="step-arrow">›</span>
+  <div class="step" onclick="goStep(3)" id="stab3">
+    <div class="step-num">3</div> Servicios
+    <span class="cnt" id="cnt-serv" style="background:#e2e8f0;color:#64748b;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+  </div>
+  <span class="step-arrow">›</span>
+  <div class="step" onclick="goStep(4)" id="stab4">
+    <div class="step-num">4</div> Software
+    <span class="cnt" id="cnt-sw" style="background:#e2e8f0;color:#64748b;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">0</span>
+  </div>
+  <span class="step-arrow">›</span>
+  <div class="step" onclick="goStep(5)" id="stab5">
+    <div class="step-num">5</div> Despacho
+  </div>
+</div>
+
+<div class="layout">
+<div class="main">
+
+<!-- ════ ENCABEZADO (step 1, shown collapsed) ════ -->
+<div class="card">
+  <div class="card-head">
+    <div class="card-head-left">
+      <div class="card-icon blue">📋</div>
+      <span class="card-title">Encabezado de la solicitud</span>
+    </div>
+    <span class="info-pill">✓ Completado — DAV1490 · Bancoccidente</span>
+  </div>
+  <!-- collapsed summary -->
+  <div style="padding:10px 18px;display:flex;gap:24px;flex-wrap:wrap;font-size:12px;color:#475569">
+    <span><b style="color:#1e293b">Oportunidad:</b> DAV1490</span>
+    <span><b style="color:#1e293b">Cliente:</b> Bancoccidente</span>
+    <span><b style="color:#1e293b">Área:</b> Comercial</span>
+    <span><b style="color:#1e293b">Origen:</b> Propuesta comercial</span>
+    <span><b style="color:#1e293b">Límite:</b> 05 Jun 2026</span>
+    <span><b style="color:#1e293b">Ciudad entrega:</b> Bogotá</span>
+    <span class="badge urgente">⚡ Urgencia: Inmediata</span>
+  </div>
+</div>
+
+<!-- ════ STEP 2 – PRODUCTOS ════ -->
+<div class="step-content active" id="sc2">
+<div class="card">
+  <div class="card-head">
+    <div class="card-head-left">
+      <div class="card-icon blue">🖥️</div>
+      <span class="card-title">Paso 2 — Productos / Hardware</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:11px;color:#64748b">Modo por ítem:</span>
+      <span class="info-pill">Funcional o por Modelos — cada fila elige</span>
+    </div>
+  </div>
+
+  <div class="card-body" style="padding:0">
+    <table class="matrix" id="prod-table">
+      <thead>
+        <tr>
+          <th style="width:32px">#</th>
+          <th style="width:160px">Categoría</th>
+          <th style="min-width:180px">Descripción / base</th>
+          <th style="width:70px">Cant.</th>
+          <th style="width:100px">Condición</th>
+          <th style="width:180px">Modo alternativas</th>
+          <th style="width:90px">Specs</th>
+          <th style="width:32px"></th>
+        </tr>
+      </thead>
+      <tbody id="prod-tbody">
+        <!-- rows injected by JS -->
+      </tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /step2 -->
+
+<!-- ════ STEP 3 – SERVICIOS ════ -->
+<div class="step-content" id="sc3">
+<div class="card">
+  <div class="card-head">
+    <div class="card-head-left">
+      <div class="card-icon green">⚙️</div>
+      <span class="card-title">Paso 3 — Servicios</span>
+    </div>
+    <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="addService()">+ Agregar servicio</button>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="matrix" id="serv-table">
+      <thead>
+        <tr>
+          <th style="width:32px">#</th>
+          <th style="width:160px">Tipo</th>
+          <th style="min-width:200px">Alcance / descripción</th>
+          <th style="width:90px">Duración</th>
+          <th style="width:110px">Modalidad</th>
+          <th style="width:140px">Perfil</th>
+          <th style="width:80px">Hs/mes</th>
+          <th style="width:32px"></th>
+        </tr>
+      </thead>
+      <tbody id="serv-tbody">
+        <tr><td colspan="8" class="empty-state"><div class="es-icon">⚙️</div>Sin servicios. Haz clic en "+ Agregar servicio".</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /step3 -->
+
+<!-- ════ STEP 4 – SOFTWARE ════ -->
+<div class="step-content" id="sc4">
+<div class="card">
+  <div class="card-head">
+    <div class="card-head-left">
+      <div class="card-icon purple">💿</div>
+      <span class="card-title">Paso 4 — Software / Licencias</span>
+    </div>
+    <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="addSoftware()">+ Agregar licencia</button>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="matrix" id="sw-table">
+      <thead>
+        <tr>
+          <th style="width:32px">#</th>
+          <th style="min-width:160px">Nombre / producto</th>
+          <th style="width:130px">Fabricante</th>
+          <th style="width:130px">Tipo licencia</th>
+          <th style="width:100px">Modalidad</th>
+          <th style="width:90px">Cant./Usuarios</th>
+          <th style="width:90px">Vigencia</th>
+          <th style="width:32px"></th>
+        </tr>
+      </thead>
+      <tbody id="sw-tbody">
+        <tr><td colspan="8" class="empty-state"><div class="es-icon">💿</div>Sin licencias. Haz clic en "+ Agregar licencia".</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div><!-- /step4 -->
+
+<!-- ════ STEP 5 – DESPACHO ════ -->
+<div class="step-content" id="sc5">
+<div class="card">
+  <div class="card-head">
+    <div class="card-head-left">
+      <div class="card-icon blue">📨</div>
+      <span class="card-title">Paso 5 — Seleccionar proveedores y despachar</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="dispatch-grid">
+      <!-- Proveedores -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:8px">Proveedores sugeridos por categoría</div>
+        <div class="prov-filter" id="prov-filters">
+          <button class="prov-filter-btn on" onclick="filterProvs(this,'all')">Todos</button>
+          <button class="prov-filter-btn" onclick="filterProvs(this,'x86')">Servidores x86</button>
+          <button class="prov-filter-btn" onclick="filterProvs(this,'power')">Power IBM</button>
+          <button class="prov-filter-btn" onclick="filterProvs(this,'storage')">Almacenamiento</button>
+          <button class="prov-filter-btn" onclick="filterProvs(this,'ram')">Memoria</button>
+        </div>
+        <div id="prov-list" style="max-height:300px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px"></div>
+        <div style="margin-top:8px;font-size:11px;color:#64748b">
+          <span id="prov-count" style="font-weight:700;color:#1e3a5f">12</span> seleccionados · Correo: <span style="font-weight:700">Español / Inglés automático</span>
+        </div>
+      </div>
+      <!-- Email preview -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#1e3a5f;margin-bottom:8px">Vista previa del correo generado</div>
+        <div class="lang-switch">
+          <button class="lang-btn on" onclick="toggleLang(this,'es')">🇨🇴 Español</button>
+          <button class="lang-btn" onclick="toggleLang(this,'en')">🇺🇸 English</button>
+        </div>
+        <div class="email-meta">
+          <span>Para: <b id="email-to">Renewtech, ETB, Nordic…</b></span>
+          <span>Asunto: <b id="email-subj">DAV1490 Solicitud de Cotización – Servidores x86…</b></span>
+        </div>
+        <div class="email-preview" id="email-body-es">DAV1490 Solicitud de Cotización – Servidores x86, Almacenamiento Flash
+
+Estimados señores,
+
+En el marco del proyecto actualmente en evaluación (DAV1490 – Bancoccidente), agradecemos nos puedan enviar cotización para los siguientes ítems:
+
+──────────────────────────────────────
+ÍTEM 1 – Servidores x86 (Qty: 5 unidades)
+Condición: RFB (Reacondicionado)
+Plataforma requerida: Intel Xeon 4ta Gen (Sapphire Rapids)
+
+▸ Opción A – Dell PowerEdge R760
+  • Procesador: 2× Intel Xeon Gold 5418Y (24C/48T, 48 cores total)
+  • Memoria RAM: 2 TB DDR5 (16×128 GB o 32×64 GB)
+  • Almacenamiento boot: 2× 480 GB SSD NVMe – RAID 1
+  • Red: 2× Dual-Port 10GbE SFP+
+  • SAN: 2× Dual-Port 32 Gb FC HBA
+  • Energía: Fuentes duales redundantes Hot-Plug
+  • Gestión: iDRAC9 Enterprise
+
+▸ Opción B – HPE ProLiant DL380 Gen11 (equivalente)
+▸ Opción C – Lenovo ThinkSystem SR650 V3 (equivalente)
+
+⚠ Variante mínima: también cotizar configuración sin memoria
+   o con memoria mínima (2× 64 GB) para optimización de costos.
+
+──────────────────────────────────────
+ÍTEM 2 – Almacenamiento Flash (Qty: 1 unidad)
+Condición: RFB
+Modelo de referencia: IBM FlashSystem 9500
+  • Nodos: 2× Node Canister
+  • Capacidad efectiva: 200 TB
+  • Red: 4× 10 GbE iSCSI + 4× 1 GbE
+  • SAN: 6× FC 32 Gb 4-port
+
+──────────────────────────────────────
+Solicitamos que la cotización incluya:
+  ✓ Precio unitario y total
+  ✓ Disponibilidad en stock
+  ✓ Tiempo estimado de entrega (días hábiles)
+  ✓ Vigencia de la cotización
+  ✓ Condiciones de garantía
+  ✓ Costo de flete a Bogotá, Colombia
+  ✓ Condiciones comerciales / forma de pago
+
+Fecha límite para responder: 05 de junio de 2026.
+
+Cordialmente,
+Compras SISA
+compras@sisa.com.co</div>
+
+        <div class="email-preview" id="email-body-en" style="display:none">DAV1490 Request for Quotation – x86 Servers, Flash Storage
+
+Dear supplier,
+
+As part of the project currently under evaluation (DAV1490 – Bancoccidente), we kindly request your quotation for the following items:
+
+──────────────────────────────────────
+ITEM 1 – x86 Servers (Qty: 5 units)
+Condition: RFB (Refurbished)
+Platform: Intel Xeon 4th Gen (Sapphire Rapids)
+
+▸ Option A – Dell PowerEdge R760
+  • Processor: 2× Intel Xeon Gold 5418Y (24C/48T, 48 cores total)
+  • RAM: 2 TB DDR5 (16×128 GB or 32×64 GB)
+  • Boot storage: 2× 480 GB NVMe SSD – RAID 1
+  • Network: 2× Dual-Port 10GbE SFP+
+  • SAN: 2× Dual-Port 32 Gb FC HBA
+  • Power: Dual redundant Hot-Plug supplies
+  • Management: iDRAC9 Enterprise
+
+▸ Option B – HPE ProLiant DL380 Gen11 (equivalent)
+▸ Option C – Lenovo ThinkSystem SR650 V3 (equivalent)
+
+⚠ Minimal config: please also quote without memory
+   or with minimal memory (2× 64 GB) for cost optimization.
+
+──────────────────────────────────────
+ITEM 2 – Flash Storage (Qty: 1 unit)
+Condition: RFB
+Reference model: IBM FlashSystem 9500
+  • Nodes: 2× Node Canister
+  • Effective capacity: 200 TB
+  • Network: 4× 10 GbE iSCSI + 4× 1 GbE
+  • SAN: 6× FC 32 Gb 4-port
+
+──────────────────────────────────────
+Please include in your quotation:
+  ✓ Unit and total price
+  ✓ Stock availability
+  ✓ Estimated lead time (business days)
+  ✓ Quote validity
+  ✓ Warranty terms
+  ✓ Freight cost to Bogotá, Colombia
+  ✓ Payment terms
+
+Response deadline: June 5, 2026.
+
+Kind regards,
+Compras SISA
+compras@sisa.com.co</div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px">✏️ Editar cuerpo</button>
+          <button class="btn btn-primary" style="font-size:12px;padding:6px 12px" onclick="alert('✅ 12 correos programados para envío.\n\nSe registrará la trazabilidad de cada envío.')">📨 Enviar a seleccionados (12)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /step5 -->
+
+</div><!-- /main -->
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+  <div class="summary-box">
+    <div class="summary-title">📊 Resumen solicitud</div>
+    <div class="summary-item">
+      <span class="summary-item-label">Oportunidad</span>
+      <span class="summary-badge">DAV1490</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-item-label">Cliente</span>
+      <span class="summary-item-val">Bancoccidente</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-item-label">Ítems hardware</span>
+      <span class="summary-item-val" id="s-prod">2 ítems</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-item-label">Servicios</span>
+      <span class="summary-item-val" id="s-serv">—</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-item-label">Software</span>
+      <span class="summary-item-val" id="s-sw">—</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-item-label">Proveedores a contactar</span>
+      <span class="summary-item-val">12 sugeridos</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-item-label">Idioma</span>
+      <span class="summary-item-val">ES + EN auto</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-item-label">Límite cotización</span>
+      <span class="summary-item-val" style="color:#dc2626;font-weight:700">05 Jun 2026</span>
+    </div>
+  </div>
+
+  <div class="providers-box" id="sidebar-provs">
+    <div class="providers-title">Proveedores activos para esta categoría</div>
+    <!-- filled by JS -->
+  </div>
+
+</div><!-- /sidebar -->
+</div><!-- /layout -->
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <div class="bottom-bar-left">
+    <span>Borrador guardado automáticamente</span>
+    <span style="color:#059669;font-weight:600">● 13:42</span>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-secondary" onclick="prevStep()">← Anterior</button>
+    <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Siguiente →</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const CATS = ['Servidores x86','Servidores Power (IBM)','Almacenamiento Flash','Memoria RAM','Networking / Switches','Cables y accesorios','Otro'];
+const CONDS = ['Nuevo','RFB (Reacondicionado)','Indiferente'];
+const MODES = ['Funcional','Modelos específicos'];
+
+const PROVIDERS = [
+  {name:'Renewtech',lang:'EN',cats:['x86','storage']},
+  {name:'ETB Technologies',lang:'EN',cats:['x86']},
+  {name:'Nordic Computer',lang:'EN',cats:['x86','storage']},
+  {name:'Bytestock',lang:'EN',cats:['x86','ram']},
+  {name:'Levenit',lang:'ES',cats:['x86']},
+  {name:'NewServerLife',lang:'EN',cats:['x86']},
+  {name:'Alta Technologies',lang:'EN',cats:['x86','power','storage']},
+  {name:'Covenco',lang:'ES',cats:['power','storage']},
+  {name:'Vibrant',lang:'EN',cats:['x86','storage']},
+  {name:'Flagship Tech',lang:'EN',cats:['x86','power']},
+  {name:'Midland InfoSys',lang:'EN',cats:['power']},
+  {name:'memory.net',lang:'EN',cats:['ram']},
+  {name:'Multisolit',lang:'ES',cats:['x86']},
+  {name:'CCL',lang:'EN',cats:['x86']},
+];
+
+const SPEC_TEMPLATES = {
+  'Servidores x86': [
+    {label:'Procesador',key:'cpu',placeholder:'2× Intel Xeon Gold 5418Y (24C/48T)'},
+    {label:'Memoria RAM',key:'ram',placeholder:'2 TB DDR5 (16×128 GB o 32×64 GB)'},
+    {label:'Boot / Almacenamiento',key:'boot',placeholder:'2× 480 GB SSD – RAID 1'},
+    {label:'Discos adicionales',key:'disks',placeholder:'—'},
+    {label:'Red (NIC)',key:'nic',placeholder:'2× Dual-Port 10GbE SFP+'},
+    {label:'SAN (HBA)',key:'hba',placeholder:'2× Dual-Port 32 Gb FC'},
+    {label:'Energía',key:'psu',placeholder:'Dual redundante Hot-Plug'},
+    {label:'Rieles',key:'rails',placeholder:'Deslizantes'},
+    {label:'Gestión remota',key:'mgmt',placeholder:'iDRAC9 Enterprise'},
+  ],
+  'Servidores Power (IBM)': [
+    {label:'Familia / Modelo',key:'model',placeholder:'IBM Power10 – S1024'},
+    {label:'Cores activos',key:'cores',placeholder:'96 cores totales'},
+    {label:'Memoria RAM',key:'ram',placeholder:'4 TB (OMI balanceado)'},
+    {label:'Virtualización',key:'virt',placeholder:'PowerVM Enterprise Edition'},
+    {label:'Red',key:'nic',placeholder:'8× puertos 10GbE'},
+    {label:'SAN',key:'hba',placeholder:'8× puertos FC 32 Gb'},
+    {label:'Almacenamiento local',key:'storage',placeholder:'2× NVMe RAID 1'},
+  ],
+  'Almacenamiento Flash': [
+    {label:'Modelo / familia',key:'model',placeholder:'IBM FlashSystem 9500'},
+    {label:'Nodos',key:'nodes',placeholder:'2× Node Canister'},
+    {label:'CPU por nodo',key:'cpu',placeholder:'4× 16-core Intel Skylake 2.2 GHz'},
+    {label:'Caché',key:'cache',placeholder:'1536 GB'},
+    {label:'Capacidad efectiva',key:'cap',placeholder:'200 TB'},
+    {label:'Red',key:'net',placeholder:'4× 10 GbE iSCSI + 4× 1 GbE'},
+    {label:'SAN',key:'san',placeholder:'6× FC 32 Gb 4-port'},
+    {label:'Otros',key:'other',placeholder:'Cables C13-C14, rieles'},
+  ],
+  'Memoria RAM': [
+    {label:'Tipo',key:'type',placeholder:'DDR5 RDIMM ECC'},
+    {label:'Velocidad',key:'speed',placeholder:'4800 MT/s o superior'},
+    {label:'Capacidad por módulo',key:'cap',placeholder:'64 GB / 128 GB'},
+    {label:'Plataforma destino',key:'platform',placeholder:'Intel Xeon Scalable Gen4 (Sapphire Rapids)'},
+    {label:'Estimado total proyecto',key:'total',placeholder:'~10 TB'},
+    {label:'Part number requerido',key:'pn',placeholder:'Sí — indicar PN y fabricante'},
+    {label:'Pricing por tramos',key:'tiers',placeholder:'Sí — cotizar volumen'},
+  ],
+  'Networking / Switches': [
+    {label:'Tipo',key:'type',placeholder:'Switch Core / Acceso / Borde'},
+    {label:'Puertos',key:'ports',placeholder:'48× 25GbE + 8× 100GbE uplink'},
+    {label:'Marca preferida',key:'brand',placeholder:'Cisco / Aruba / Dell'},
+    {label:'Gestión',key:'mgmt',placeholder:'SNMP, REST API, SSH'},
+  ],
+};
+
+// Initial rows
+let prodRows = [
+  {id:1, cat:'Servidores x86', desc:'Dell R760 / equivalente', qty:5, cond:'RFB (Reacondicionado)', mode:'Modelos específicos', altModels:['Dell PowerEdge R760','HPE ProLiant DL380 Gen11','Lenovo ThinkSystem SR650 V3'], specs:{cpu:'2× Intel Xeon Gold 5418Y (24C/48T)',ram:'2 TB DDR5',boot:'2× 480 GB SSD NVMe – RAID 1',nic:'2× Dual-Port 10GbE SFP+',hba:'2× Dual-Port 32 Gb FC',psu:'Dual redundante Hot-Plug',rails:'Deslizantes',mgmt:'iDRAC9 Enterprise'}, variantB:true, expanded:true},
+  {id:2, cat:'Almacenamiento Flash', desc:'IBM FlashSystem 9500', qty:1, cond:'RFB (Reacondicionado)', mode:'Funcional', altModels:[], specs:{model:'IBM FlashSystem 9500',nodes:'2× Node Canister',cpu:'4× 16-core Intel Skylake 2.2 GHz',cache:'1536 GB',cap:'200 TB',net:'4× 10 GbE iSCSI + 4× 1 GbE',san:'6× FC 32 Gb 4-port',other:'Cables C13-C14, rieles'}, variantB:false, expanded:false},
+];
+let servRows = [];
+let swRows = [];
+let nextProdId = 3;
+let nextServId = 1;
+let nextSwId = 1;
+
+let currentStep = 2;
+
+// ═══════════════════════════════════════════════
+// STEP NAVIGATION
+// ═══════════════════════════════════════════════
+function goStep(n){
+  currentStep = n;
+  document.querySelectorAll('.step-content').forEach(el => { el.classList.remove('active'); el.style.display='none'; });
+  const sc = document.getElementById('sc'+n);
+  if(sc){ sc.classList.add('active'); sc.style.display='block'; }
+  document.querySelectorAll('.step').forEach((el,i) => {
+    el.classList.remove('active');
+    if(i+1 < n) { el.classList.add('done'); el.querySelector('.step-num').textContent='✓'; }
+    else if(i+1 === n) { el.classList.add('active'); el.querySelector('.step-num').textContent=n; }
+    else { el.classList.remove('done'); el.querySelector('.step-num').textContent=i+1; }
+  });
+  document.getElementById('btn-next').textContent = n===5 ? '📨 Generar correos' : 'Siguiente →';
+}
+function nextStep(){ if(currentStep<5) goStep(currentStep+1); }
+function prevStep(){ if(currentStep>1) goStep(currentStep-1); }
+
+// ═══════════════════════════════════════════════
+// RENDER PRODUCTS
+// ═══════════════════════════════════════════════
+function renderProducts(){
+  const tbody = document.getElementById('prod-tbody');
+  tbody.innerHTML = '';
+  prodRows.forEach((row,idx) => {
+    // Main row
+    const tr = document.createElement('tr');
+    tr.className = 'item-row' + (row.expanded?' expanded':'');
+    tr.id = 'prod-tr-'+row.id;
+    tr.innerHTML = `
+      <td class="cell cell-num">${idx+1}</td>
+      <td class="cell">
+        <select onchange="updateProdRow(${row.id},'cat',this.value)">
+          ${CATS.map(c=>`<option${c===row.cat?' selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td class="cell">
+        <input type="text" value="${row.desc}" placeholder="Descripción base o referencia…"
+          oninput="updateProdRow(${row.id},'desc',this.value)"/>
+      </td>
+      <td class="cell">
+        <input type="number" value="${row.qty}" min="1" style="width:60px"
+          oninput="updateProdRow(${row.id},'qty',this.value)"/>
+      </td>
+      <td class="cell">
+        <select class="cond-select" onchange="updateProdRow(${row.id},'cond',this.value)">
+          ${CONDS.map(c=>`<option${c===row.cond?' selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td class="cell">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="mode-toggle">
+            <div class="mode-btn${row.mode==='Funcional'?' active':''}" onclick="setMode(${row.id},'Funcional')">🔧 Funcional</div>
+            <div class="mode-btn${row.mode==='Modelos específicos'?' active':''}" onclick="setMode(${row.id},'Modelos específicos')">📋 Modelos</div>
+          </div>
+          ${row.mode==='Modelos específicos'?renderAltModels(row):'<div style="font-size:10px;color:#64748b;padding:2px 0">El proveedor propone modelo equivalente</div>'}
+        </div>
+      </td>
+      <td class="cell">
+        <button class="expand-btn${row.expanded?' open':''}" onclick="toggleSpecs(${row.id})">
+          <span class="arrow">›</span> ${row.expanded?'Ocultar':'Ver specs'}
+        </button>
+      </td>
+      <td class="cell"><button class="delete-btn" onclick="deleteProdRow(${row.id})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+
+    // Spec panel row
+    const specTr = document.createElement('tr');
+    specTr.id = 'spec-tr-'+row.id;
+    const specs = SPEC_TEMPLATES[row.cat] || [];
+    specTr.innerHTML = `
+      <td colspan="8">
+        <div class="spec-panel${row.expanded?' open':''}" id="spec-panel-${row.id}">
+          <div class="spec-panel-inner">
+            <div class="spec-section-title">Especificaciones técnicas — ${row.cat}</div>
+            ${specs.map(s=>`
+              <div class="spec-field">
+                <label>${s.label}</label>
+                <input type="text" placeholder="${s.placeholder}" value="${row.specs[s.key]||''}"
+                  oninput="updateSpec(${row.id},'${s.key}',this.value)"/>
+              </div>
+            `).join('')}
+            <div class="variant-b spec-full">
+              <input type="checkbox" id="vb-${row.id}" ${row.variantB?'checked':''} onchange="updateProdRow(${row.id},'variantB',this.checked)"/>
+              <label for="vb-${row.id}">
+                <b>Variante mínima:</b> también cotizar configuración sin memoria o con memoria mínima (para optimización de costos)
+              </label>
+            </div>
+          </div>
+        </div>
+      </td>`;
+    tbody.appendChild(specTr);
+  });
+
+  // Add row button
+  const addTr = document.createElement('tr');
+  addTr.className = 'add-item-row';
+  addTr.innerHTML = `<td colspan="8">
+    <button class="add-item-btn" onclick="addProdRow()">＋ Agregar ítem</button>
+  </td>`;
+  tbody.appendChild(addTr);
+
+  updateSummary();
+}
+
+function renderAltModels(row){
+  return `<div class="alt-models-area">
+    ${row.altModels.map((m,i)=>`
+      <div class="alt-model-row">
+        <span style="font-size:10px;color:#94a3b8;width:12px">${i+1}</span>
+        <input type="text" value="${m}" placeholder="Marca Modelo…"
+          oninput="updateAltModel(${row.id},${i},this.value)"/>
+        <button class="rm-btn" onclick="removeAltModel(${row.id},${i})">×</button>
+      </div>`).join('')}
+    <button class="add-alt-btn" onclick="addAltModel(${row.id})">+ opción</button>
+  </div>`;
+}
+
+function addProdRow(){
+  prodRows.push({id:nextProdId++,cat:'Servidores x86',desc:'',qty:1,cond:'RFB (Reacondicionado)',mode:'Funcional',altModels:[],specs:{},variantB:false,expanded:false});
+  renderProducts();
+}
+function deleteProdRow(id){ prodRows = prodRows.filter(r=>r.id!==id); renderProducts(); }
+function updateProdRow(id,key,val){
+  const r = prodRows.find(r=>r.id===id);
+  if(r){ r[key]=val; if(key==='cat') r.specs={}; renderProducts(); }
+}
+function updateSpec(id,key,val){
+  const r = prodRows.find(r=>r.id===id);
+  if(r) r.specs[key]=val;
+}
+function setMode(id,mode){ const r=prodRows.find(r=>r.id===id); if(r){r.mode=mode; renderProducts();} }
+function toggleSpecs(id){ const r=prodRows.find(r=>r.id===id); if(r){r.expanded=!r.expanded; renderProducts();} }
+function updateAltModel(id,i,val){ const r=prodRows.find(r=>r.id===id); if(r) r.altModels[i]=val; }
+function addAltModel(id){ const r=prodRows.find(r=>r.id===id); if(r){r.altModels.push(''); renderProducts();} }
+function removeAltModel(id,i){ const r=prodRows.find(r=>r.id===id); if(r){r.altModels.splice(i,1); renderProducts();} }
+
+// ═══════════════════════════════════════════════
+// SERVICES
+// ═══════════════════════════════════════════════
+const SERV_TYPES = ['FTE / Operación','Monitoreo (NOC)','Implementación','Soporte a usuario','Gestión del servicio','Conectividad / Canal','Otro'];
+const MOD = ['Remoto','En sitio','Mixto'];
+const PROFILES = ['Analista Junior','Analista Senior','Administrador Junior','Administrador Senior','Especialista','Gestor de Servicios','PM'];
+
+function addService(){
+  servRows.push({id:nextServId++,tipo:SERV_TYPES[0],alcance:'',dur:'12',mod:'Remoto',perfil:'Administrador Senior',hs:180});
+  renderServices();
+}
+function renderServices(){
+  const tbody = document.getElementById('serv-tbody');
+  if(!servRows.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state"><div class="es-icon">⚙️</div>Sin servicios.</td></tr>'; updateSummary(); return; }
+  tbody.innerHTML = servRows.map((r,i)=>`
+    <tr class="item-row">
+      <td class="cell cell-num">${i+1}</td>
+      <td class="cell"><select>${SERV_TYPES.map(t=>`<option${t===r.tipo?' selected':''}>${t}</option>`).join('')}</select></td>
+      <td class="cell"><input type="text" value="${r.alcance}" placeholder="Descripción del alcance del servicio…"/></td>
+      <td class="cell"><input type="text" value="${r.dur}" placeholder="meses" style="width:70px"/> meses</td>
+      <td class="cell"><select>${MOD.map(m=>`<option${m===r.mod?' selected':''}>${m}</option>`).join('')}</select></td>
+      <td class="cell"><select>${PROFILES.map(p=>`<option${p===r.perfil?' selected':''}>${p}</option>`).join('')}</select></td>
+      <td class="cell"><input type="number" value="${r.hs}" style="width:60px"/></td>
+      <td class="cell"><button class="delete-btn" onclick="deleteServ(${r.id})">✕</button></td>
+    </tr>`).join('');
+  updateSummary();
+}
+function deleteServ(id){ servRows=servRows.filter(r=>r.id!==id); renderServices(); }
+
+// ═══════════════════════════════════════════════
+// SOFTWARE
+// ═══════════════════════════════════════════════
+const SW_TIPOS = ['Por servidor','Por core','Por usuario','Por suscripción','Perpetua','Site license'];
+const SW_MOD = ['Perpetua','Suscripción anual','Suscripción mensual'];
+const SW_MAKERS = ['IBM','Dell','HPE','Microsoft','VMware','Red Hat','Oracle','Otro'];
+
+function addSoftware(){
+  swRows.push({id:nextSwId++,nombre:'',maker:'IBM',tipo:SW_TIPOS[0],mod:SW_MOD[0],cant:'1',vigencia:'12 meses'});
+  renderSoftware();
+}
+function renderSoftware(){
+  const tbody = document.getElementById('sw-tbody');
+  if(!swRows.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-state"><div class="es-icon">💿</div>Sin licencias.</td></tr>'; updateSummary(); return; }
+  tbody.innerHTML = swRows.map((r,i)=>`
+    <tr class="item-row">
+      <td class="cell cell-num">${i+1}</td>
+      <td class="cell"><input type="text" value="${r.nombre}" placeholder="Nombre del software / producto…"/></td>
+      <td class="cell"><select>${SW_MAKERS.map(m=>`<option${m===r.maker?' selected':''}>${m}</option>`).join('')}</select></td>
+      <td class="cell"><select>${SW_TIPOS.map(t=>`<option${t===r.tipo?' selected':''}>${t}</option>`).join('')}</select></td>
+      <td class="cell"><select>${SW_MOD.map(m=>`<option${m===r.mod?' selected':''}>${m}</option>`).join('')}</select></td>
+      <td class="cell"><input type="text" value="${r.cant}" style="width:70px"/></td>
+      <td class="cell"><input type="text" value="${r.vigencia}" style="width:80px"/></td>
+      <td class="cell"><button class="delete-btn" onclick="deleteSw(${r.id})">✕</button></td>
+    </tr>`).join('');
+  updateSummary();
+}
+function deleteSw(id){ swRows=swRows.filter(r=>r.id!==id); renderSoftware(); }
+
+// ═══════════════════════════════════════════════
+// PROVIDERS
+// ═══════════════════════════════════════════════
+let selectedProvs = new Set(PROVIDERS.map((_,i)=>i));
+let currentProvFilter = 'all';
+
+function filterProvs(btn,cat){
+  document.querySelectorAll('.prov-filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  currentProvFilter = cat;
+  renderProviders();
+}
+
+function renderProviders(){
+  const list = document.getElementById('prov-list');
+  const sidebar = document.getElementById('sidebar-provs');
+  const filtered = PROVIDERS.filter((_,i)=> currentProvFilter==='all' || PROVIDERS[i].cats.includes(currentProvFilter));
+  list.innerHTML = filtered.map((p,fi)=>{
+    const i = PROVIDERS.indexOf(p);
+    return `<div class="provider-row">
+      <input type="checkbox" ${selectedProvs.has(i)?'checked':''} onchange="toggleProv(${i},this.checked)"/>
+      <span class="provider-name">${p.name}</span>
+      <span class="provider-lang">${p.lang}</span>
+      <span class="provider-cat">${p.cats.join(', ')}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('prov-count').textContent = selectedProvs.size;
+
+  // Sidebar
+  const topProvs = PROVIDERS.filter((_,i)=>selectedProvs.has(i)).slice(0,6);
+  sidebar.innerHTML = `<div class="providers-title">Proveedores seleccionados (${selectedProvs.size})</div>`
+    + topProvs.map(p=>`<div class="provider-row"><div class="provider-name">${p.name}</div><span class="provider-lang">${p.lang}</span></div>`).join('')
+    + (selectedProvs.size>6?`<div style="font-size:11px;color:#94a3b8;padding:6px 0">+${selectedProvs.size-6} más…</div>`:'');
+}
+function toggleProv(i,on){ if(on) selectedProvs.add(i); else selectedProvs.delete(i); renderProviders(); }
+
+// ═══════════════════════════════════════════════
+// EMAIL LANG TOGGLE
+// ═══════════════════════════════════════════════
+function toggleLang(btn,lang){
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('email-body-es').style.display = lang==='es'?'':'none';
+  document.getElementById('email-body-en').style.display = lang==='en'?'':'none';
+  document.getElementById('email-subj').textContent = lang==='es'
+    ? 'DAV1490 Solicitud de Cotización – Servidores x86…'
+    : 'DAV1490 Request for Quotation – x86 Servers…';
+}
+
+// ═══════════════════════════════════════════════
+// SUMMARY
+// ═══════════════════════════════════════════════
+function updateSummary(){
+  document.getElementById('s-prod').textContent = prodRows.length ? prodRows.length+' ítems' : '—';
+  document.getElementById('s-serv').textContent = servRows.length ? servRows.length+' servicio'+(servRows.length>1?'s':'') : '—';
+  document.getElementById('s-sw').textContent = swRows.length ? swRows.length+' licencia'+(swRows.length>1?'s':'') : '—';
+  document.getElementById('cnt-prod').textContent = prodRows.length;
+  document.getElementById('cnt-serv').textContent = servRows.length;
+  document.getElementById('cnt-sw').textContent = swRows.length;
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+renderProducts();
+renderServices();
+renderSoftware();
+renderProviders();
+</script>
+</body>
+</html>

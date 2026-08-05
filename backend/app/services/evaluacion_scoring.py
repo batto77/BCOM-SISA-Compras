@@ -1,0 +1,203 @@
+"""Motor de puntuación para la adjudicación del proveedor ganador.
+
+La comparación se hace **por ítem** (manzana con manzana): para cada ítem
+requerido se compara el precio unitario, el tiempo de entrega y la calificación
+de los proveedores que sí lo ofertan, y se sugiere el mejor proveedor de ese ítem.
+La compra puede repartirse (adjudicación por ítem).
+
+Además se calcula un **ranking global corregido**: el criterio financiero ya no
+usa el total crudo (que compararía canastas distintas), sino el promedio —sobre
+TODOS los ítems requeridos— de qué tan competitivo es el proveedor frente al mejor
+precio de cada ítem (los ítems que no oferta cuentan como 0). Así un proveedor que
+oferta un solo ítem barato queda penalizado, no premiado.
+
+Sub-puntajes (0–100):
+  - financiero     : mejor_precio_ítem / precio_del_proveedor × 100  (por ítem)
+  - tiempo_entrega : menor_días_ítem / días_del_proveedor × 100      (por ítem)
+  - completitud    : ítems ofertados / ítems requeridos × 100        (solo global)
+  - calificacion   : calificación_del_proveedor (0–10) × 10
+"""
+from __future__ import annotations
+
+from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
+CLAVES = ("financiero", "tiempo_entrega", "completitud", "calificacion")
+CLAVES_ITEM = ("financiero", "tiempo_entrega", "calificacion")  # completitud no aplica por ítem
+
+
+def _num(v: Any) -> float:
+    if v is None:
+        return 0.0
+    if isinstance(v, Decimal):
+        return float(v)
+    return float(v)
+
+
+def _item_lookup(cot) -> Dict[int, Any]:
+    """Map item_solicitud_id -> ItemCotizacion, solo disponibles y con precio > 0."""
+    m: Dict[int, Any] = {}
+    for it in cot.items:
+        if it.item_solicitud_id is None:
+            continue
+        if it.disponible and _num(it.precio_unitario) > 0:
+            m[it.item_solicitud_id] = it
+    return m
+
+
+def resolver_pesos(pesos_solicitud: Optional[dict], criterios_base: List[Any]) -> Dict[str, float]:
+    """Combina los pesos base (tabla paramétrica) con el override de la oportunidad."""
+    pesos: Dict[str, float] = {}
+    for c in criterios_base:
+        if getattr(c, "activo", True):
+            pesos[c.clave] = _num(c.peso_default)
+    if pesos_solicitud:
+        for clave, valor in pesos_solicitud.items():
+            if clave in pesos or clave in CLAVES:
+                pesos[clave] = _num(valor)
+    return pesos
+
+
+def _score_tiempo(dias: Optional[int], menor_dias: float) -> float:
+    if dias is None:
+        return 0.0
+    if dias <= 0:
+        return 100.0
+    if menor_dias > 0:
+        return round(menor_dias / dias * 100, 1)
+    return 0.0
+
+
+def calcular_evaluacion(
+    *,
+    items_solicitud: List[Any],
+    cotizaciones: List[Any],
+    pesos: Dict[str, float],
+) -> Dict[str, Any]:
+    """Devuelve la evaluación por ítem + ranking global + adjudicación sugerida.
+
+    Solo participan las cotizaciones en estado 'respondida'.
+    """
+    respondidas = [c for c in cotizaciones if c.estado == "respondida"]
+    total_items = len(items_solicitud)
+    lookups = {c.id: _item_lookup(c) for c in respondidas}
+    cant = {i.id: (_num(getattr(i, "cantidad", 1)) or 1) for i in items_solicitud}
+
+    # Mejor precio y menor tiempo por ítem (entre los que lo ofertan)
+    mejor_precio: Dict[int, float] = {}
+    menor_dias: Dict[int, float] = {}
+    for i in items_solicitud:
+        precios, dias_list = [], []
+        for c in respondidas:
+            it = lookups[c.id].get(i.id)
+            if it:
+                precios.append(_num(it.precio_unitario))
+                if it.tiempo_entrega_dias is not None:
+                    dias_list.append(it.tiempo_entrega_dias)
+        mejor_precio[i.id] = min(precios) if precios else 0.0
+        menor_dias[i.id] = min(dias_list) if dias_list else 0.0
+
+    # Pesos por ítem (sin completitud), renormalizados
+    pesos_item = {k: pesos.get(k, 0) for k in CLAVES_ITEM}
+    suma_pesos_item = sum(pesos_item.values()) or 1
+
+    # ---- Evaluación por ítem (adjudicación) ----
+    por_item = []
+    adjudicacion_sugerida: Dict[int, int] = {}
+    for i in items_solicitud:
+        candidatos = []
+        for c in respondidas:
+            it = lookups[c.id].get(i.id)
+            if not it:
+                continue
+            precio = _num(it.precio_unitario)
+            s_fin = round(mejor_precio[i.id] / precio * 100, 1) if precio > 0 and mejor_precio[i.id] > 0 else 0.0
+            s_time = _score_tiempo(it.tiempo_entrega_dias, menor_dias[i.id])
+            s_cal = round(_num(getattr(c.proveedor, "calificacion", None)) * 10, 1) if c.proveedor else 0.0
+            final = (
+                s_fin * pesos_item["financiero"]
+                + s_time * pesos_item["tiempo_entrega"]
+                + s_cal * pesos_item["calificacion"]
+            ) / suma_pesos_item
+            candidatos.append({
+                "cotizacion_id": c.id,
+                "proveedor_id": c.proveedor_id,
+                "precio_unitario": precio,
+                "cantidad": cant.get(i.id, 1),
+                "subtotal": precio * cant.get(i.id, 1),
+                "tiempo_entrega_dias": it.tiempo_entrega_dias,
+                "subpuntajes": {"financiero": s_fin, "tiempo_entrega": s_time, "calificacion": s_cal},
+                "puntaje": round(final, 1),
+                "es_mejor": False,
+            })
+        mejor_id = None
+        if candidatos:
+            mejor = max(candidatos, key=lambda x: x["puntaje"])
+            mejor_id = mejor["cotizacion_id"]
+            for cnd in candidatos:
+                if cnd["cotizacion_id"] == mejor_id:
+                    cnd["es_mejor"] = True
+        adjudicacion_sugerida[i.id] = mejor_id
+        por_item.append({
+            "item_solicitud_id": i.id,
+            "descripcion": getattr(i, "descripcion", ""),
+            "tipo": getattr(i, "tipo", ""),
+            "cantidad": cant.get(i.id, 1),
+            "candidatos": candidatos,
+            "mejor_cotizacion_id": mejor_id,
+        })
+
+    # ---- Ranking global corregido ----
+    resultados = []
+    for c in respondidas:
+        lk = lookups[c.id]
+        fin_scores, time_scores = [], []
+        for i in items_solicitud:
+            it = lk.get(i.id)
+            # Financiero: 0 si no oferta el ítem (penaliza cobertura parcial)
+            if it and mejor_precio[i.id] > 0:
+                fin_scores.append(mejor_precio[i.id] / _num(it.precio_unitario) * 100)
+            else:
+                fin_scores.append(0.0)
+            # Tiempo: 0 si no oferta el ítem
+            if it and it.tiempo_entrega_dias is not None:
+                time_scores.append(_score_tiempo(it.tiempo_entrega_dias, menor_dias[i.id]))
+            else:
+                time_scores.append(0.0)
+        s_fin = round(sum(fin_scores) / total_items, 1) if total_items else 0.0
+        s_time = round(sum(time_scores) / total_items, 1) if total_items else 0.0
+        disp = len(lk)
+        s_comp = round(disp / total_items * 100, 1) if total_items else 0.0
+        s_cal = round(_num(getattr(c.proveedor, "calificacion", None)) * 10, 1) if c.proveedor else 0.0
+        sub = {"financiero": s_fin, "tiempo_entrega": s_time, "completitud": s_comp, "calificacion": s_cal}
+        suma_pesos = sum(pesos.get(k, 0) for k in sub) or 1
+        final = sum(sub[k] * pesos.get(k, 0) for k in sub) / suma_pesos
+        total_cot = sum(_num(it.precio_unitario) * cant.get(iid, 1) for iid, it in lk.items())
+        resultados.append({
+            "cotizacion_id": c.id,
+            "proveedor_id": c.proveedor_id,
+            "total": total_cot,
+            "items_disponibles": disp,
+            "items_totales": total_items,
+            "calificacion": _num(getattr(c.proveedor, "calificacion", None)) if c.proveedor else 0.0,
+            "subpuntajes": sub,
+            "puntaje_final": round(final, 1),
+            "es_ganador_sugerido": False,
+        })
+
+    ganador_id = None
+    if resultados:
+        mejor = max(resultados, key=lambda r: r["puntaje_final"])
+        if mejor["puntaje_final"] > 0:
+            ganador_id = mejor["cotizacion_id"]
+            for r in resultados:
+                if r["cotizacion_id"] == ganador_id:
+                    r["es_ganador_sugerido"] = True
+
+    return {
+        "pesos": pesos,
+        "por_item": por_item,
+        "adjudicacion_sugerida": adjudicacion_sugerida,
+        "resultados": resultados,
+        "ganador_sugerido_cotizacion_id": ganador_id,
+    }

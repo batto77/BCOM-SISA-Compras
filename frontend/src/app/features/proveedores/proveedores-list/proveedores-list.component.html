@@ -1,0 +1,118 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Proveedores</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item active">Proveedores</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title flex-grow-1">
+          {{ proveedores.length }} proveedor{{ proveedores.length !== 1 ? 'es' : '' }}
+        </h3>
+        <a [routerLink]="['/proveedores/nuevo']" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus mr-1"></i>Nuevo proveedor
+        </a>
+      </div>
+      <div class="card-body p-0 position-relative">
+
+        @if (cargando) {
+          <div class="overlay">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+          </div>
+        }
+
+        <dx-data-grid
+          #grid
+          [dataSource]="proveedores"
+          [showBorders]="false"
+          [rowAlternationEnabled]="true"
+          [hoverStateEnabled]="true"
+          [columnAutoWidth]="true"
+        >
+          <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+          <dxo-filter-row [visible]="true"></dxo-filter-row>
+          <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-toolbar>
+            <dxi-item location="before" template="btnLimpiar"></dxi-item>
+            <dxi-item name="searchPanel"></dxi-item>
+          </dxo-toolbar>
+          <div *dxTemplate="let _ of 'btnLimpiar'">
+            <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()" title="Limpiar filtros">
+              <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+            </button>
+          </div>
+
+          <dxi-column dataField="nit" caption="NIT / ID" [width]="140"></dxi-column>
+          <dxi-column dataField="tipo_persona" caption="Tipo" [width]="110" cellTemplate="tipoPersTemplate"></dxi-column>
+          <div *dxTemplate="let c of 'tipoPersTemplate'">
+            @if (c.data.tipo_persona) {
+              <span class="badge" [class.badge-primary]="c.data.tipo_persona === 'juridica'" [class.badge-info]="c.data.tipo_persona === 'natural'">
+                {{ c.data.tipo_persona === 'juridica' ? 'Jurídica' : 'Natural' }}
+              </span>
+            }
+          </div>
+          <dxi-column dataField="razon_social" caption="Razón social" [minWidth]="200"></dxi-column>
+          <dxi-column dataField="nombre_comercial" caption="Nombre comercial"></dxi-column>
+          <dxi-column dataField="pais" caption="País" [width]="120"></dxi-column>
+          <dxi-column caption="Idioma" [width]="90" cellTemplate="idiomaTpl"></dxi-column>
+          <div *dxTemplate="let c of 'idiomaTpl'">
+            <span class="badge" [class.badge-primary]="c.data.idioma === 'ES'" [class.badge-info]="c.data.idioma === 'EN'">
+              {{ c.data.idioma }}
+            </span>
+          </div>
+          <dxi-column dataField="calificacion" caption="Calificación" [width]="150" cellTemplate="calificacionTpl"></dxi-column>
+          <div *dxTemplate="let c of 'calificacionTpl'">
+            @if (c.data.calificacion != null && c.data.calificacion > 0) {
+              <span class="rating-stars-mini" [title]="(c.data.calificacion | number:'1.0-1') + ' / 10'">
+                @for (n of estrellas; track n) {
+                  <i class="fa-star" [class.fas]="n <= c.data.calificacion" [class.far]="n > c.data.calificacion"></i>
+                }
+              </span>
+              <span class="text-muted small ml-1">{{ c.data.calificacion | number:'1.0-1' }}</span>
+            } @else {
+              <span class="text-muted small">Sin calificar</span>
+            }
+          </div>
+          <dxi-column caption="Estado" [width]="90" cellTemplate="estadoTpl"></dxi-column>
+          <div *dxTemplate="let c of 'estadoTpl'">
+            <span class="badge" [class.badge-success]="c.data.estado === 'activo'" [class.badge-secondary]="c.data.estado !== 'activo'">
+              {{ c.data.estado }}
+            </span>
+          </div>
+          <dxi-column caption="Etiquetas" cellTemplate="etiquetasTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <div *dxTemplate="let c of 'etiquetasTpl'">
+            @for (et of getEtiquetasProveedor(c.data); track et.id) {
+              <span class="badge mr-1" [style.background]="et.color || '#6c757d'" style="color:#fff">{{ et.nombre }}</span>
+            }
+          </div>
+          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <div *dxTemplate="let c of 'accionesTpl'">
+            <a [routerLink]="['/proveedores', c.data.id, 'editar']" class="btn btn-xs btn-outline-primary mr-1" title="Editar">
+              <i class="fas fa-pencil-alt"></i>
+            </a>
+          </div>
+        </dx-data-grid>
+
+      </div>
+    </div>
+
+  </div>
+</div>

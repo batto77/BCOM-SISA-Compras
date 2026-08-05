@@ -1,0 +1,38 @@
+@use '../../shared/styles/item-specifications';
+
+// El bloque de especificaciones ocupa todo el ancho del ítem (td colspan=6),
+// en vez de quedar limitado a 920px / calc(100vw) y desperdiciar el lado derecho.
+// Al usar todo el ancho, la grilla auto-fit arma más columnas y reduce el alto (menos scroll vertical).
+.specs-detail {
+  max-width: none;
+  width: 100%;
+  position: static;
+}
+
+// Botón flotante "Ver comparativo" — abajo a la derecha
+.fab-comparativo {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1030;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 30px;
+  background: #17a2b8;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 6px 18px rgba(23, 162, 184, 0.45);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+
+  &:hover {
+    background: #138496;
+    color: #fff;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(23, 162, 184, 0.55);
+  }
+
+  i { font-size: 16px; }
+}

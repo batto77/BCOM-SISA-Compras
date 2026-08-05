@@ -1,0 +1,178 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Catálogo de servicios</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item active">Catálogo de servicios</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title flex-grow-1">Servicios</h3>
+        <button class="btn btn-primary btn-sm" (click)="abrirNuevo()">
+          <i class="fas fa-plus mr-1"></i>Nuevo servicio
+        </button>
+      </div>
+      <div class="card-body p-0 position-relative">
+
+        @if (cargando) {
+          <div class="overlay"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>
+        }
+
+        <dx-data-grid
+          #grid
+          [dataSource]="servicios"
+          [showBorders]="false"
+          [rowAlternationEnabled]="true"
+          [hoverStateEnabled]="true"
+          [columnAutoWidth]="true"
+        >
+          <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+          <dxo-filter-row [visible]="true"></dxo-filter-row>
+          <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-toolbar>
+            <dxi-item location="before" template="btnLimpiar"></dxi-item>
+            <dxi-item name="searchPanel"></dxi-item>
+          </dxo-toolbar>
+          <div *dxTemplate="let _ of 'btnLimpiar'">
+            <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()" title="Limpiar filtros">
+              <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+            </button>
+          </div>
+
+          <dxi-column dataField="nombre" caption="Nombre" [minWidth]="180"></dxi-column>
+          <dxi-column caption="Categoría" [width]="160" cellTemplate="catTpl"></dxi-column>
+          <div *dxTemplate="let c of 'catTpl'">{{ getCategoriaServNombre(c.data.categoria_servicio_id) }}</div>
+          <dxi-column caption="Tipo servicio" [width]="150" cellTemplate="tipoTpl"></dxi-column>
+          <div *dxTemplate="let c of 'tipoTpl'">{{ getTipoServNombre(c.data.tipo_servicio_id) }}</div>
+          <dxi-column caption="Unidad" [width]="120" cellTemplate="unidadTpl"></dxi-column>
+          <div *dxTemplate="let c of 'unidadTpl'">{{ getUnidadNombre(c.data.unidad_medida_id) }}</div>
+          <dxi-column caption="Activo" [width]="80" cellTemplate="activoTpl"></dxi-column>
+          <div *dxTemplate="let c of 'activoTpl'">
+            <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
+              {{ c.data.activo ? 'Sí' : 'No' }}
+            </span>
+          </div>
+          <dxi-column caption="Etiquetas" cellTemplate="etiquetasTpl"></dxi-column>
+          <div *dxTemplate="let c of 'etiquetasTpl'">
+            @for (et of c.data.etiquetas; track et.id) {
+              <span class="badge mr-1" [style.background]="et.color || '#6c757d'" style="color:#fff">{{ et.nombre }}</span>
+            }
+          </div>
+          <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesTpl"></dxi-column>
+          <div *dxTemplate="let c of 'accionesTpl'">
+            <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
+              <i class="fas fa-pencil-alt"></i>
+            </button>
+          </div>
+        </dx-data-grid>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup nuevo/editar servicio -->
+<dx-popup
+  [(visible)]="popupVisible"
+  [title]="modoEdicion ? 'Editar servicio' : 'Nuevo servicio'"
+  [width]="520"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  (onHidden)="popupVisible = false"
+>
+  <div *dxTemplate="let d of 'content'">
+    <div class="form-group">
+      <label>Nombre <span class="text-danger">*</span></label>
+      <dx-text-box [value]="servicioActual.nombre ?? ''" (valueChange)="servicioActual.nombre = $event" placeholder="Nombre del servicio..." [showClearButton]="true"></dx-text-box>
+    </div>
+
+    <div class="form-group">
+      <label>Descripción</label>
+      <dx-text-box [value]="servicioActual.descripcion ?? ''" (valueChange)="servicioActual.descripcion = $event" placeholder="Descripción del servicio..." [showClearButton]="true"></dx-text-box>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Categoría</label>
+          <dx-select-box
+            [items]="categoriasServicio"
+            displayExpr="nombre"
+            valueExpr="id"
+            [(value)]="servicioActual.categoria_servicio_id"
+            placeholder="Seleccioná categoría..."
+            [showClearButton]="true"
+          ></dx-select-box>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Tipo de servicio</label>
+          <dx-select-box
+            [items]="tiposServicio"
+            displayExpr="nombre"
+            valueExpr="id"
+            [(value)]="servicioActual.tipo_servicio_id"
+            placeholder="Seleccioná tipo..."
+            [showClearButton]="true"
+          ></dx-select-box>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Unidad de medida</label>
+      <dx-select-box
+        [items]="unidades"
+        displayExpr="nombre"
+        valueExpr="id"
+        [(value)]="servicioActual.unidad_medida_id"
+        placeholder="Seleccioná unidad..."
+        [showClearButton]="true"
+      ></dx-select-box>
+    </div>
+
+    <div class="form-group">
+      <label>Etiquetas</label>
+      <dx-tag-box
+        [items]="etiquetas"
+        displayExpr="nombre"
+        valueExpr="id"
+        [value]="servicioActual.etiquetas_ids ?? []"
+        (valueChange)="servicioActual.etiquetas_ids = $event"
+        placeholder="Seleccioná etiquetas..."
+        [showSelectionControls]="true"
+        [searchEnabled]="true"
+      ></dx-tag-box>
+    </div>
+
+    <div class="form-group d-flex align-items-center">
+      <label class="mr-3 mb-0">Activo</label>
+      <dx-switch [value]="servicioActual.activo ?? false" (valueChange)="servicioActual.activo = $event"></dx-switch>
+    </div>
+
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-secondary mr-2" (click)="popupVisible = false">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardar()" [disabled]="!servicioActual.nombre?.trim()">
+        <i class="fas fa-save mr-1"></i>Guardar
+      </button>
+    </div>
+  </div>
+</dx-popup>

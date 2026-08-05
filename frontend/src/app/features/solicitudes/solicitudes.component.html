@@ -1,0 +1,120 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Oportunidades</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item active">Oportunidades</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title flex-grow-1">
+          {{ solicitudes.length }} oportunidad{{ solicitudes.length !== 1 ? 'es' : '' }}
+        </h3>
+        <a [routerLink]="['/solicitudes/nueva']" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus mr-1"></i>Nueva oportunidad
+        </a>
+      </div>
+      <div class="card-body p-0 position-relative">
+
+        @if (cargando) {
+          <div class="overlay">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+          </div>
+        }
+
+        <dx-data-grid
+          #grid
+          [dataSource]="solicitudes"
+          [showBorders]="false"
+          [rowAlternationEnabled]="true"
+          [hoverStateEnabled]="true"
+          [columnAutoWidth]="true"
+        >
+          <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+          <dxo-filter-row [visible]="true"></dxo-filter-row>
+          <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-toolbar>
+            <dxi-item location="before" template="btnLimpiar"></dxi-item>
+            <dxi-item name="searchPanel"></dxi-item>
+          </dxo-toolbar>
+          <div *dxTemplate="let _ of 'btnLimpiar'">
+            <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()" title="Limpiar filtros">
+              <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+            </button>
+          </div>
+
+          <dxi-column
+            dataField="numero"
+            caption="ID DAV"
+            [width]="145"
+            [fixed]="true"
+            fixedPosition="left"
+          ></dxi-column>
+          <dxi-column caption="Versión" [width]="86" cellTemplate="versionTpl"></dxi-column>
+          <div *dxTemplate="let c of 'versionTpl'">
+            <span class="badge badge-primary">v{{ c.data.version_actual || 1 }}</span>
+          </div>
+          <dxi-column dataField="titulo" caption="Título" [minWidth]="220"></dxi-column>
+          <dxi-column dataField="solicitante_nombre" caption="Solicitante" [width]="160"></dxi-column>
+          <dxi-column dataField="aprobador" caption="Aprobador" [width]="160"></dxi-column>
+          <dxi-column caption="Rubros" [minWidth]="180" cellTemplate="rubrosTpl" [allowFiltering]="false"></dxi-column>
+          <div *dxTemplate="let c of 'rubrosTpl'">
+            {{ getRubrosTexto(c.data) }}
+          </div>
+
+          <dxi-column caption="Prioridad" [width]="110" cellTemplate="prioridadTpl" [allowFiltering]="false"></dxi-column>
+          <div *dxTemplate="let c of 'prioridadTpl'">
+            <span class="badge" [ngClass]="getPrioridadBadgeClass(c.data.prioridad)">
+              {{ c.data.prioridad }}
+            </span>
+          </div>
+
+          <dxi-column caption="Estado" [width]="120" cellTemplate="estadoTpl" [allowFiltering]="false"></dxi-column>
+          <div *dxTemplate="let c of 'estadoTpl'">
+            <span class="badge" [ngClass]="getEstadoBadgeClass(c.data.estado)">
+              {{ c.data.estado | titlecase }}
+            </span>
+          </div>
+
+          <dxi-column caption="Ítems" [width]="70" cellTemplate="itemsTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <div *dxTemplate="let c of 'itemsTpl'">
+            <span class="badge badge-light border">{{ c.data.items?.length ?? 0 }}</span>
+          </div>
+
+          <dxi-column dataField="fecha_requerida" caption="Fecha requerida" dataType="date" [width]="130" format="dd/MM/yyyy"></dxi-column>
+          <dxi-column dataField="created_at" caption="Creada" dataType="datetime" [width]="140" format="dd/MM/yyyy HH:mm"></dxi-column>
+
+          <dxi-column caption="Acciones" [width]="118" cellTemplate="accionesTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <div *dxTemplate="let c of 'accionesTpl'">
+            <a [routerLink]="['/solicitudes', c.data.id]" class="btn btn-xs btn-outline-primary" title="Ver detalle">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a [routerLink]="['/cotizaciones/asistente', c.data.id]" class="btn btn-xs btn-outline-success ml-1" title="Editar RFQ">
+              <i class="fas fa-edit"></i>
+            </a>
+          </div>
+
+        </dx-data-grid>
+
+      </div>
+    </div>
+
+  </div>
+</div>

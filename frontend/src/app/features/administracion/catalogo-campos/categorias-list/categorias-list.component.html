@@ -1,0 +1,340 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Catálogo de campos</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/administracion']">Administración</a></li>
+          <li class="breadcrumb-item active">Campos de producto</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    <div class="row">
+      <!-- Panel izquierdo: categorías filtrables -->
+      <div class="col-md-5">
+        <div class="card">
+          <div class="card-header d-flex align-items-center">
+            <h3 class="card-title flex-grow-1">Categorías</h3>
+            <button class="btn btn-sm btn-primary" (click)="abrirNuevaCategoria()" title="Nueva categoría">
+              <i class="fas fa-plus mr-1"></i>Nueva
+            </button>
+          </div>
+          <div class="card-body p-0 position-relative" style="min-height:200px">
+            @if (cargando) {
+              <div class="overlay"><i class="fas fa-sync-alt fa-spin"></i></div>
+            }
+            <dx-data-grid
+              #gridCategorias
+              [dataSource]="categorias"
+              keyExpr="id"
+              [showBorders]="false"
+              [rowAlternationEnabled]="true"
+              [hoverStateEnabled]="true"
+              [columnAutoWidth]="false"
+              [focusedRowEnabled]="true"
+              [focusedRowKey]="categoriaSeleccionada?.id"
+              (onRowClick)="seleccionarCategoria($event.data)"
+            >
+              <dxo-search-panel [visible]="true" placeholder="Buscar categoría..."></dxo-search-panel>
+              <dxo-filter-row [visible]="true"></dxo-filter-row>
+              <dxo-header-filter [visible]="true"></dxo-header-filter>
+              <dxo-paging [enabled]="false"></dxo-paging>
+              <dxo-scrolling mode="standard" showScrollbar="onHover"></dxo-scrolling>
+              <dxo-toolbar>
+                <dxi-item location="before" template="btnLimpiarCategorias"></dxi-item>
+                <dxi-item name="searchPanel"></dxi-item>
+              </dxo-toolbar>
+              <div *dxTemplate="let _ of 'btnLimpiarCategorias'">
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  (click)="limpiarFiltrosCategorias()"
+                  title="Limpiar filtros de categorías"
+                >
+                  <i class="fas fa-eraser"></i>
+                </button>
+              </div>
+
+              <dxi-column dataField="nombre" caption="Nombre" [minWidth]="150"></dxi-column>
+              <dxi-column dataField="tipo" caption="Tipo" [width]="105" cellTemplate="tipoCategoriaTpl"></dxi-column>
+              <div *dxTemplate="let c of 'tipoCategoriaTpl'">
+                <span
+                  class="badge"
+                  [class.badge-primary]="c.data.tipo === 'hardware'"
+                  [class.badge-warning]="c.data.tipo === 'software'"
+                  [class.badge-info]="c.data.tipo === 'licencia'"
+                  [class.badge-secondary]="c.data.tipo === 'servicio'"
+                >
+                  {{ c.data.tipo }}
+                </span>
+              </div>
+              <dxi-column dataField="activo" caption="Activo" dataType="boolean" [width]="75"></dxi-column>
+              <dxi-column caption="" [width]="48" cellTemplate="accionesCategoriaTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+              <div *dxTemplate="let c of 'accionesCategoriaTpl'">
+                <button
+                  class="btn btn-xs btn-outline-primary"
+                  (click)="abrirEditarCategoria(c.data); $event.stopPropagation()"
+                  title="Editar categoría"
+                >
+                  <i class="fas fa-pencil-alt"></i>
+                </button>
+              </div>
+            </dx-data-grid>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel derecho: campos de la categoría seleccionada -->
+      <div class="col-md-7">
+        @if (categoriaSeleccionada) {
+          <div class="card">
+            <div class="card-header d-flex align-items-center">
+              <h3 class="card-title flex-grow-1">
+                Campos de: <strong>{{ categoriaSeleccionada.nombre }}</strong>
+              </h3>
+              <button class="btn btn-primary btn-sm" (click)="abrirNuevoCampo()">
+                <i class="fas fa-plus mr-1"></i>Nuevo campo
+              </button>
+            </div>
+            <div class="card-body p-0 position-relative">
+              @if (cargandoCampos) {
+                <div class="overlay"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>
+              }
+              <dx-data-grid
+                #gridCampos
+                [dataSource]="campos"
+                [showBorders]="false"
+                [rowAlternationEnabled]="true"
+                [hoverStateEnabled]="true"
+                [columnAutoWidth]="true"
+              >
+                <dxo-search-panel [visible]="true" placeholder="Buscar campo..."></dxo-search-panel>
+                <dxo-filter-row [visible]="true"></dxo-filter-row>
+                <dxo-header-filter [visible]="true"></dxo-header-filter>
+                <dxo-toolbar>
+                  <dxi-item location="before" template="btnLimpiarCampos"></dxi-item>
+                  <dxi-item name="searchPanel"></dxi-item>
+                </dxo-toolbar>
+                <div *dxTemplate="let _ of 'btnLimpiarCampos'">
+                  <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltrosCampos()" title="Limpiar filtros">
+                    <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+                  </button>
+                </div>
+
+                <dxi-column dataField="orden" caption="Ord." [width]="60"></dxi-column>
+                <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
+                <dxi-column dataField="clave" caption="Clave" [width]="140"></dxi-column>
+                <dxi-column caption="Tipo" [width]="100" cellTemplate="tipoTpl"></dxi-column>
+                <div *dxTemplate="let c of 'tipoTpl'">
+                  <span class="badge" [ngClass]="getTipoBadgeClass(c.data.tipo_dato)">{{ c.data.tipo_dato }}</span>
+                </div>
+                <dxi-column caption="Cant." [width]="60" cellTemplate="cantTpl"></dxi-column>
+                <div *dxTemplate="let c of 'cantTpl'">
+                  <i class="fas" [class.fa-check-circle]="c.data.tiene_cantidad" [class.fa-minus-circle]="!c.data.tiene_cantidad"
+                    [class.text-success]="c.data.tiene_cantidad" [class.text-secondary]="!c.data.tiene_cantidad"></i>
+                </div>
+                <dxi-column caption="Unidad" [width]="70" cellTemplate="unidTpl"></dxi-column>
+                <div *dxTemplate="let c of 'unidTpl'">
+                  <i class="fas" [class.fa-check-circle]="c.data.tiene_unidad" [class.fa-minus-circle]="!c.data.tiene_unidad"
+                    [class.text-success]="c.data.tiene_unidad" [class.text-secondary]="!c.data.tiene_unidad"></i>
+                </div>
+                <dxi-column caption="Obligatorio" [width]="90" cellTemplate="obligTpl"></dxi-column>
+                <div *dxTemplate="let c of 'obligTpl'">
+                  <i class="fas" [class.fa-check-circle]="c.data.es_obligatorio" [class.fa-circle]="!c.data.es_obligatorio"
+                    [class.text-danger]="c.data.es_obligatorio" [class.text-secondary]="!c.data.es_obligatorio"></i>
+                </div>
+                <dxi-column caption="Base" [width]="65" cellTemplate="baseTpl"></dxi-column>
+                <div *dxTemplate="let c of 'baseTpl'">
+                  <span class="badge" [class.badge-dark]="c.data.es_campo_base" [class.badge-light]="!c.data.es_campo_base">
+                    {{ c.data.es_campo_base ? 'Base' : 'Custom' }}
+                  </span>
+                </div>
+                <dxi-column caption="Activo" [width]="70" cellTemplate="activoCTpl"></dxi-column>
+                <div *dxTemplate="let c of 'activoCTpl'">
+                  <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
+                    {{ c.data.activo ? 'Sí' : 'No' }}
+                  </span>
+                </div>
+                <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesCTpl"></dxi-column>
+                <div *dxTemplate="let c of 'accionesCTpl'">
+                  <button class="btn btn-xs btn-outline-primary mr-1" (click)="abrirEditarCampo(c.data)" title="Editar">
+                    <i class="fas fa-pencil-alt"></i>
+                  </button>
+                  <button class="btn btn-xs btn-outline-secondary" (click)="toggleActivoCampo(c.data)"
+                    [title]="c.data.activo ? 'Desactivar' : 'Activar'">
+                    <i class="fas" [class.fa-toggle-on]="c.data.activo" [class.fa-toggle-off]="!c.data.activo"></i>
+                  </button>
+                </div>
+              </dx-data-grid>
+            </div>
+          </div>
+        } @else {
+          <div class="card">
+            <div class="card-body text-center text-muted py-5">
+              <i class="fas fa-hand-point-left fa-2x mb-2"></i>
+              <p>Seleccioná una categoría para ver sus campos</p>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Popup nueva categoría -->
+<dx-popup
+  [(visible)]="popupCategoriaVisible"
+  [title]="modoEdicionCategoria ? 'Editar categoría' : 'Nueva categoría'"
+  [width]="480"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  (onHidden)="popupCategoriaVisible = false"
+>
+  <div *dxTemplate="let d of 'content'">
+    <div class="form-group">
+      <label>Nombre <span class="text-danger">*</span></label>
+      <dx-text-box [value]="categoriaActual.nombre ?? ''" (valueChange)="categoriaActual.nombre = $event" placeholder="Ej: Servidor, Laptop..." [showClearButton]="true"></dx-text-box>
+    </div>
+    <div class="form-group">
+      <label>Tipo <span class="text-danger">*</span></label>
+      <dx-select-box [items]="tiposCategoria" displayExpr="nombre" valueExpr="id" [(value)]="categoriaActual.tipo" placeholder="Seleccioná un tipo..."></dx-select-box>
+    </div>
+    <div class="form-group">
+      <label>Descripción</label>
+      <dx-text-box [value]="categoriaActual.descripcion ?? ''" (valueChange)="categoriaActual.descripcion = $event" placeholder="Descripción opcional..." [showClearButton]="true"></dx-text-box>
+    </div>
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-secondary mr-2" (click)="popupCategoriaVisible = false">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardarCategoria()" [disabled]="!categoriaActual.nombre?.trim()">
+        <i class="fas fa-save mr-1"></i>Guardar
+      </button>
+    </div>
+  </div>
+</dx-popup>
+
+<!-- Popup nuevo/editar campo -->
+<dx-popup
+  [(visible)]="popupCampoVisible"
+  [title]="modoEdicionCampo ? 'Editar campo' : 'Nuevo campo'"
+  [width]="560"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  (onHidden)="popupCampoVisible = false"
+>
+  <div *dxTemplate="let d of 'content'">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Nombre <span class="text-danger">*</span></label>
+          <dx-text-box [value]="campoActual.nombre ?? ''" (valueChange)="campoActual.nombre = $event; autoSlug($event)" placeholder="Ej: Procesador, RAM..."
+            [showClearButton]="true"></dx-text-box>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Clave (slug) <span class="text-danger">*</span></label>
+          <dx-text-box [value]="campoActual.clave ?? ''" (valueChange)="campoActual.clave = $event" placeholder="procesador, ram_gb..."
+            [showClearButton]="true"></dx-text-box>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Tipo de dato <span class="text-danger">*</span></label>
+          <dx-select-box [items]="tiposDato" [(value)]="campoActual.tipo_dato" placeholder="Seleccioná tipo..."></dx-select-box>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="form-group">
+          <label>Orden</label>
+          <dx-number-box [value]="campoActual.orden ?? 1" (valueChange)="campoActual.orden = $event" [min]="1" [step]="1"></dx-number-box>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4">
+        <div class="form-group d-flex align-items-center">
+          <label class="mr-2 mb-0">Obligatorio</label>
+          <dx-switch [value]="campoActual.es_obligatorio ?? false" (valueChange)="campoActual.es_obligatorio = $event"></dx-switch>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group d-flex align-items-center">
+          <label class="mr-2 mb-0">Campo base</label>
+          <dx-switch [value]="campoActual.es_campo_base ?? false" (valueChange)="campoActual.es_campo_base = $event"></dx-switch>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="form-group d-flex align-items-center">
+          <label class="mr-2 mb-0">¿Cantidad?</label>
+          <dx-switch [value]="campoActual.tiene_cantidad ?? false" (valueChange)="campoActual.tiene_cantidad = $event"></dx-switch>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group d-flex align-items-center">
+      <label class="mr-2 mb-0">¿Tiene unidad de medida?</label>
+      <dx-switch [value]="campoActual.tiene_unidad ?? false" (valueChange)="campoActual.tiene_unidad = $event"></dx-switch>
+    </div>
+
+    @if (campoActual.tiene_unidad) {
+      <div class="form-group">
+        <label>Unidades disponibles</label>
+        <dx-tag-box
+          [items]="unidades"
+          displayExpr="nombre"
+          valueExpr="id"
+          [value]="getUnidadesIds(campoActual)"
+          (onValueChanged)="onOpcionesUnidadChange($event.value)"
+          placeholder="Seleccioná unidades..."
+          [showSelectionControls]="true"
+          [searchEnabled]="true"
+        ></dx-tag-box>
+      </div>
+      <div class="form-group">
+        <label>Unidad por defecto</label>
+        <dx-select-box
+          [items]="unidades"
+          displayExpr="nombre"
+          valueExpr="id"
+          [(value)]="campoActual.unidad_default_id"
+          placeholder="Seleccioná unidad por defecto..."
+          [showClearButton]="true"
+        ></dx-select-box>
+      </div>
+    }
+
+    <div class="form-group">
+      <label>Placeholder</label>
+      <dx-text-box [value]="campoActual.placeholder ?? ''" (valueChange)="campoActual.placeholder = $event" placeholder="Texto de ayuda en el campo..." [showClearButton]="true"></dx-text-box>
+    </div>
+    <div class="form-group">
+      <label>Descripción de ayuda</label>
+      <dx-text-box [value]="campoActual.descripcion_ayuda ?? ''" (valueChange)="campoActual.descripcion_ayuda = $event" placeholder="Texto tooltip de ayuda..." [showClearButton]="true"></dx-text-box>
+    </div>
+
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-secondary mr-2" (click)="popupCampoVisible = false">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardarCampo()" [disabled]="!campoActual.nombre?.trim()">
+        <i class="fas fa-save mr-1"></i>Guardar
+      </button>
+    </div>
+  </div>
+</dx-popup>

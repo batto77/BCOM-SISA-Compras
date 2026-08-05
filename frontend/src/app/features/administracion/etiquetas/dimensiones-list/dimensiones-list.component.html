@@ -1,0 +1,152 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Categorías</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/administracion']">Administración</a></li>
+          <li class="breadcrumb-item active">Categorías</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title flex-grow-1">Categorías de etiquetas</h3>
+        <button class="btn btn-primary btn-sm" (click)="abrirNueva()">
+          <i class="fas fa-plus mr-1"></i>Nueva categoría
+        </button>
+      </div>
+      <div class="card-body p-0 position-relative">
+
+        @if (cargando) {
+          <div class="overlay">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+          </div>
+        }
+
+        <dx-data-grid
+          #grid
+          [dataSource]="dimensiones"
+          [showBorders]="false"
+          [rowAlternationEnabled]="true"
+          [hoverStateEnabled]="true"
+          [columnAutoWidth]="true"
+          [wordWrapEnabled]="false"
+        >
+          <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+          <dxo-filter-row [visible]="true"></dxo-filter-row>
+          <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-toolbar>
+            <dxi-item location="before" template="btnLimpiar"></dxi-item>
+            <dxi-item name="searchPanel"></dxi-item>
+          </dxo-toolbar>
+          <div *dxTemplate="let _ of 'btnLimpiar'">
+            <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()" title="Limpiar filtros">
+              <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+            </button>
+          </div>
+
+          <dxi-column dataField="nombre" caption="Nombre" [minWidth]="150"></dxi-column>
+
+          <dxi-column caption="Color" [width]="120" cellTemplate="colorTemplate"></dxi-column>
+          <div *dxTemplate="let cell of 'colorTemplate'">
+            @if (cell.data.color) {
+              <span class="badge" [style.background]="cell.data.color" style="color:#fff; padding:4px 10px;">
+                {{ cell.data.nombre }}
+              </span>
+            } @else {
+              <span class="text-muted">—</span>
+            }
+          </div>
+
+          <dxi-column dataField="descripcion" caption="Descripción"></dxi-column>
+
+          <dxi-column caption="Activo" [width]="80" cellTemplate="activoTemplate"></dxi-column>
+          <div *dxTemplate="let cell of 'activoTemplate'">
+            @if (cell.data.activo) {
+              <span class="badge badge-success">Sí</span>
+            } @else {
+              <span class="badge badge-secondary">No</span>
+            }
+          </div>
+
+          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTemplate"></dxi-column>
+          <div *dxTemplate="let cell of 'accionesTemplate'">
+            <button class="btn btn-xs btn-outline-primary mr-1" (click)="abrirEditar(cell.data)" title="Editar">
+              <i class="fas fa-pencil-alt"></i>
+            </button>
+            <button class="btn btn-xs btn-outline-secondary" (click)="toggleActivo(cell.data)"
+              [title]="cell.data.activo ? 'Desactivar' : 'Activar'">
+              <i class="fas" [class.fa-toggle-on]="cell.data.activo" [class.fa-toggle-off]="!cell.data.activo"></i>
+            </button>
+          </div>
+        </dx-data-grid>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Popup nueva/editar categoría -->
+<dx-popup
+  [(visible)]="popupVisible"
+  [title]="modoEdicion ? 'Editar categoría' : 'Nueva categoría'"
+  [width]="480"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  (onHidden)="cancelar()"
+>
+  <div *dxTemplate="let data of 'content'">
+    <div class="form-group">
+      <label>Nombre <span class="text-danger">*</span></label>
+      <dx-text-box
+        [value]="dimensionActual.nombre ?? ''"
+        (valueChange)="dimensionActual.nombre = $event"
+        placeholder="Ej: Área funcional, Prioridad..."
+        [showClearButton]="true"
+      ></dx-text-box>
+    </div>
+
+    <div class="form-group">
+      <label>Color</label>
+      <dx-color-box
+        [value]="dimensionActual.color ?? ''"
+        (valueChange)="dimensionActual.color = $event"
+        placeholder="Seleccionar color..."
+        [editAlphaChannel]="false"
+      ></dx-color-box>
+    </div>
+
+    <div class="form-group">
+      <label>Descripción</label>
+      <dx-text-box
+        [value]="dimensionActual.descripcion ?? ''"
+        (valueChange)="dimensionActual.descripcion = $event"
+        placeholder="Descripción opcional..."
+        [showClearButton]="true"
+      ></dx-text-box>
+    </div>
+
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-secondary mr-2" (click)="cancelar()">Cancelar</button>
+      <button class="btn btn-primary" (click)="guardar()"
+        [disabled]="!dimensionActual.nombre?.trim()">
+        <i class="fas fa-save mr-1"></i>Guardar
+      </button>
+    </div>
+  </div>
+</dx-popup>

@@ -1,0 +1,96 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Catálogo de productos</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item active">Catálogo de productos</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title flex-grow-1">
+          {{ productos.length }} producto{{ productos.length !== 1 ? 's' : '' }}
+        </h3>
+        <a [routerLink]="['/catalogo-productos/nuevo']" class="btn btn-primary btn-sm">
+          <i class="fas fa-plus mr-1"></i>Nuevo producto
+        </a>
+      </div>
+      <div class="card-body p-0 position-relative">
+
+        @if (cargando) {
+          <div class="overlay"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>
+        }
+
+        <dx-data-grid
+          #grid
+          [dataSource]="productos"
+          [showBorders]="false"
+          [rowAlternationEnabled]="true"
+          [hoverStateEnabled]="true"
+          [columnAutoWidth]="true"
+        >
+          <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+          <dxo-filter-row [visible]="true"></dxo-filter-row>
+          <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-toolbar>
+            <dxi-item location="before" template="btnLimpiar"></dxi-item>
+            <dxi-item name="searchPanel"></dxi-item>
+          </dxo-toolbar>
+          <div *dxTemplate="let _ of 'btnLimpiar'">
+            <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()" title="Limpiar filtros">
+              <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+            </button>
+          </div>
+
+          <dxi-column dataField="nombre" caption="Nombre" [minWidth]="180"></dxi-column>
+          <dxi-column caption="Categoría" [width]="150" cellTemplate="catTpl"></dxi-column>
+          <div *dxTemplate="let c of 'catTpl'">
+            {{ c.data.categoria_producto?.nombre || '—' }}
+          </div>
+          <dxi-column caption="Modo" [width]="160" cellTemplate="modoTpl" [allowFiltering]="false"></dxi-column>
+          <div *dxTemplate="let c of 'modoTpl'">
+            <span class="badge" [class.badge-primary]="c.data.modo_defecto === 'funcional'" [class.badge-warning]="c.data.modo_defecto !== 'funcional'">
+              {{ c.data.modo_defecto === 'funcional' ? 'Funcional' : 'Modelos específicos' }}
+            </span>
+          </div>
+          <dxi-column caption="Activo" [width]="80" cellTemplate="activoTpl" [allowFiltering]="false"></dxi-column>
+          <div *dxTemplate="let c of 'activoTpl'">
+            <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
+              {{ c.data.activo ? 'Sí' : 'No' }}
+            </span>
+          </div>
+          <dxi-column caption="Etiquetas" cellTemplate="etiquetasTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <div *dxTemplate="let c of 'etiquetasTpl'">
+            @for (et of c.data.etiquetas; track et.id) {
+              <span class="badge mr-1" [style.background]="et.color || '#6c757d'" style="color:#fff">{{ et.nombre }}</span>
+            }
+          </div>
+          <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <div *dxTemplate="let c of 'accionesTpl'">
+            <a [routerLink]="['/catalogo-productos', c.data.id, 'editar']" class="btn btn-xs btn-outline-primary" title="Editar">
+              <i class="fas fa-pencil-alt"></i>
+            </a>
+          </div>
+        </dx-data-grid>
+
+      </div>
+    </div>
+
+  </div>
+</div>

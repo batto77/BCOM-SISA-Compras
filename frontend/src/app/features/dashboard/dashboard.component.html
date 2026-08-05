@@ -1,0 +1,148 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Dashboard</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item active">Inicio</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+    @if (error) {
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+        <button type="button" class="btn btn-sm btn-outline-danger ml-3" (click)="cargar()">
+          Reintentar
+        </button>
+      </div>
+    }
+
+    <div class="row">
+      @for (tarjeta of tarjetas; track tarjeta.titulo) {
+        <div class="col-xl-3 col-md-6">
+          <div class="small-box bg-{{ tarjeta.color }}">
+            <div class="inner">
+              <h3>{{ cargando ? '—' : tarjeta.valor }}</h3>
+              <p>{{ tarjeta.titulo }}</p>
+            </div>
+            <div class="icon"><i class="{{ tarjeta.icono }}"></i></div>
+            <a [routerLink]="tarjeta.ruta" class="small-box-footer">
+              Ver detalle <i class="fas fa-arrow-circle-right"></i>
+            </a>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="dashboard-grid">
+      <section class="card">
+        <div class="card-header d-flex align-items-center">
+          <h3 class="card-title flex-grow-1">
+            <i class="fas fa-history mr-2"></i>Oportunidades recientes
+          </h3>
+          <a routerLink="/solicitudes" class="btn btn-sm btn-outline-primary">Ver todas</a>
+        </div>
+        <div class="card-body p-0">
+          @if (cargando) {
+            <div class="dashboard-loading"><i class="fas fa-sync-alt fa-spin"></i></div>
+          } @else if (!resumen?.oportunidades_recientes?.length) {
+            <div class="text-center text-muted p-4">No hay oportunidades registradas.</div>
+          } @else {
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead>
+                  <tr>
+                    <th>Oportunidad</th>
+                    <th>Estado</th>
+                    <th>Prioridad</th>
+                    <th>Respuestas</th>
+                    <th>Fecha requerida</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (oportunidad of resumen?.oportunidades_recientes ?? []; track oportunidad.id) {
+                    <tr>
+                      <td>
+                        <a [routerLink]="['/solicitudes', oportunidad.id]" class="font-weight-bold">
+                          {{ oportunidad.numero ?? ('#' + oportunidad.id) }}
+                        </a>
+                        <span class="opportunity-title">{{ oportunidad.titulo }}</span>
+                      </td>
+                      <td>
+                        <span class="badge" [ngClass]="getEstadoBadgeClass(oportunidad.estado)">
+                          {{ getEstadoLabel(oportunidad.estado) }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge" [ngClass]="getPrioridadBadgeClass(oportunidad.prioridad)">
+                          {{ oportunidad.prioridad }}
+                        </span>
+                      </td>
+                      <td>
+                        {{ oportunidad.respuestas_recibidas }} / {{ oportunidad.proveedores_invitados }}
+                      </td>
+                      <td>
+                        {{ oportunidad.fecha_requerida
+                          ? (oportunidad.fecha_requerida | date:'dd/MM/yyyy')
+                          : '—' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+
+      <aside>
+        <section class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-chart-pie mr-2"></i>Estado de oportunidades</h3>
+          </div>
+          <div class="card-body">
+            @for (item of estadosOportunidad; track item.estado) {
+              <div class="status-row">
+                <span class="badge" [ngClass]="getEstadoBadgeClass(item.estado)">
+                  {{ getEstadoLabel(item.estado) }}
+                </span>
+                <strong>{{ item.cantidad }}</strong>
+              </div>
+            } @empty {
+              <div class="text-muted">Sin datos disponibles.</div>
+            }
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-body response-rate">
+            <div>
+              <span>Tasa de respuesta</span>
+              <strong>{{ resumen?.tasa_respuesta ?? 0 | number:'1.0-1' }}%</strong>
+            </div>
+            <i class="fas fa-percentage"></i>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-bolt mr-2"></i>Accesos rápidos</h3>
+          </div>
+          <div class="card-body quick-actions">
+            <a routerLink="/solicitudes/nueva" class="btn btn-primary">
+              <i class="fas fa-plus mr-1"></i>Nueva oportunidad
+            </a>
+            <a routerLink="/proveedores/nuevo" class="btn btn-outline-secondary">
+              <i class="fas fa-truck mr-1"></i>Nuevo proveedor
+            </a>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>

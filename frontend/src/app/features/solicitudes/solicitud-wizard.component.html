@@ -1,0 +1,542 @@
+<section class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-7">
+        <h1 class="m-0">Nueva oportunidad</h1>
+      </div>
+      <div class="col-sm-5">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a routerLink="/dashboard">Inicio</a></li>
+          <li class="breadcrumb-item"><a routerLink="/solicitudes">Oportunidades</a></li>
+          <li class="breadcrumb-item active">Nueva</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content">
+  <div class="container-fluid">
+    <div class="request-shell">
+      <div class="request-main">
+        <div class="flow-steps" data-tour="opportunity-flow">
+          <div class="flow-step active">
+            <span>1</span>
+            Encabezado
+          </div>
+          <div class="flow-line"></div>
+          <div class="flow-step">
+            <span>2</span>
+            Ítems
+          </div>
+          <div class="flow-line"></div>
+          <div class="flow-step">
+            <span>3</span>
+            Proveedores
+          </div>
+          <div class="flow-line"></div>
+          <div class="flow-step">
+            <span>4</span>
+            Envío RFQ
+          </div>
+        </div>
+
+        <div class="card request-card">
+          <div class="card-header">
+            <h3 class="card-title">Encabezado de la oportunidad</h3>
+          </div>
+          <div class="card-body">
+            @if (cargando) {
+              <div class="loading-row">
+                <dx-load-indicator></dx-load-indicator>
+                <span>Cargando datos...</span>
+              </div>
+            } @else {
+              @if (error) {
+                <div class="alert alert-danger">{{ error }}</div>
+              }
+
+              <div class="form-grid">
+                <div class="field">
+                  <label>
+                    Número DAV
+                    <span class="field-help" title="Identificador único que viene del sistema externo. Formato: DAV-XXXXXXX (7 dígitos). Ejemplo: DAV-1234567. Debe ser único en el sistema.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-text-box
+                    [value]="numero"
+                    (valueChange)="onNumeroChange($any($event))"
+                    placeholder="DAV-1234567"
+                    [maxLength]="20"
+                    [isValid]="!errorNumero"
+                  ></dx-text-box>
+                  @if (errorNumero) {
+                    <span class="field-error">{{ errorNumero }}</span>
+                  }
+                </div>
+                <div class="field" data-tour="opportunity-title">
+                  <label>
+                    Título
+                    <span class="field-help" title="Nombre corto y reconocible de la oportunidad. Ejemplo: Renovación de servidores sede Bogotá.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-text-box
+                    [(value)]="titulo"
+                    placeholder="Ej: Renovación servidores sede Bogotá"
+                  ></dx-text-box>
+                </div>
+                <div class="field">
+                  <label>
+                    Solicitante
+                    <span class="field-help" title="Nombre de la persona responsable de crear y gestionar esta oportunidad.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-text-box
+                    [(value)]="solicitanteNombre"
+                    placeholder="Nombre del comprador interno"
+                  ></dx-text-box>
+                </div>
+                <div class="field" data-tour="opportunity-people">
+                  <label>
+                    Aprobador
+                    <span class="field-help" title="Nombre de la persona que revisará y aprobará esta oportunidad. Por ahora es un campo de texto libre.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-text-box
+                    [(value)]="aprobador"
+                    [maxLength]="200"
+                    placeholder="Nombre del aprobador"
+                  ></dx-text-box>
+                </div>
+                <div class="field">
+                  <label>
+                    Prioridad
+                    <span class="field-help" title="Nivel de urgencia con el que compras debe gestionar la oportunidad.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-select-box
+                    [items]="prioridadOptions"
+                    displayExpr="nombre"
+                    valueExpr="id"
+                    [(value)]="prioridad"
+                  ></dx-select-box>
+                </div>
+                <div class="field">
+                  <label>
+                    Rubro
+                    <span class="field-help" title="Clasificación presupuestal principal asociada a la compra.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-tag-box
+                    [items]="rubros"
+                    displayExpr="nombre"
+                    valueExpr="id"
+                    [(value)]="rubroIds"
+                    placeholder="Seleccione uno o varios rubros"
+                    [showSelectionControls]="true"
+                    [searchEnabled]="true"
+                    [maxDisplayedTags]="2"
+                    [showMultiTagOnly]="false"
+                  ></dx-tag-box>
+                </div>
+                <div class="field" data-tour="opportunity-planning">
+                  <label>
+                    Fecha requerida
+                    <span class="field-help" title="Fecha máxima en la que se requiere disponer del producto, servicio o licencia.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-date-box
+                    [value]="fechaRequerida"
+                    (valueChange)="fechaRequerida = $any($event)"
+                    displayFormat="dd/MM/yyyy"
+                    type="date"
+                  ></dx-date-box>
+                </div>
+                <div class="field span-2">
+                  <label>
+                    Descripción
+                    <span class="field-help" title="Explique la necesidad, alcance y contexto que deben conocer compras y los proveedores.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-text-area
+                    [(value)]="descripcion"
+                    [height]="96"
+                    placeholder="Contexto de la compra, necesidad o proyecto asociado"
+                  ></dx-text-area>
+                </div>
+                <div class="field span-2" data-tour="opportunity-details">
+                  <label>
+                    Notas internas
+                    <span class="field-help" title="Información exclusiva para el equipo interno; no corresponde a la respuesta del proveedor.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-text-area
+                    [(value)]="notas"
+                    [height]="76"
+                    placeholder="Condiciones, restricciones o comentarios para compras"
+                  ></dx-text-area>
+                </div>
+
+                @if (camposDinamicos.length > 0) {
+                  <div class="field span-2">
+                    <label>
+                      Campos adicionales
+                      <span class="field-help" title="Campos configurados por administración para esta organización.">
+                        <i class="fas fa-question-circle"></i>
+                      </span>
+                    </label>
+                    <div class="dynamic-fields-grid">
+                      @for (campo of camposDinamicos; track campo.id) {
+                        <div class="dyn-field">
+                          <label>
+                            {{ campo.nombre }}
+                            @if (campo.obligatorio) { <span class="required"> *</span> }
+                            @if (campo.descripcion) {
+                              <span class="field-help" [title]="campo.descripcion">
+                                <i class="fas fa-question-circle"></i>
+                              </span>
+                            }
+                          </label>
+                          @if (campo.tipo_dato === 'texto') {
+                            <dx-text-box
+                              [value]="valoresCampos[$any(campo.id)]"
+                              (valueChange)="valoresCampos[$any(campo.id)] = $event"
+                              [placeholder]="campo.nombre"
+                            ></dx-text-box>
+                          }
+                          @if (campo.tipo_dato === 'numero') {
+                            <dx-number-box
+                              [value]="valoresCampos[$any(campo.id)]"
+                              (valueChange)="valoresCampos[$any(campo.id)] = $event"
+                            ></dx-number-box>
+                          }
+                          @if (campo.tipo_dato === 'fecha') {
+                            <dx-date-box
+                              [value]="valoresCampos[$any(campo.id)] || null"
+                              (valueChange)="valoresCampos[$any(campo.id)] = $event"
+                              type="date"
+                              displayFormat="dd/MM/yyyy"
+                            ></dx-date-box>
+                          }
+                          @if (campo.tipo_dato === 'booleano') {
+                            <div class="pt-2">
+                              <dx-check-box
+                                [value]="valoresCampos[$any(campo.id)]"
+                                (valueChange)="valoresCampos[$any(campo.id)] = $event"
+                                [text]="campo.nombre"
+                              ></dx-check-box>
+                            </div>
+                          }
+                          @if (campo.tipo_dato === 'lista' && campo.opciones) {
+                            <dx-select-box
+                              [items]="$any(campo.opciones)"
+                              [value]="valoresCampos[$any(campo.id)]"
+                              (valueChange)="valoresCampos[$any(campo.id)] = $event"
+                              [placeholder]="'Seleccione ' + campo.nombre"
+                              [showClearButton]="true"
+                            ></dx-select-box>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <aside class="request-side">
+        <div class="side-panel" data-tour="opportunity-context">
+          <span class="side-kicker">Flujo</span>
+          <h2>La oportunidad se guarda antes de cotizar</h2>
+          <p>
+            Ingresá el número DAV que viene de tu sistema externo (formato DAV-XXXXXXX, 7 dígitos).
+            Luego podrás agregar productos, servicios, licencias y proveedores en el asistente de cotización.
+          </p>
+        </div>
+
+        <!-- Configurador de pesos del comparativo (por oportunidad) -->
+        @if (criteriosEval.length) {
+          <div class="weights-panel">
+            <div class="weights-head">
+              <span class="side-kicker">Comparativo</span>
+              <h3>Pesos de evaluación</h3>
+              <p class="weights-desc">
+                Definí cuánto pesa cada criterio al elegir al ganador en esta oportunidad. Deben sumar 100%.
+              </p>
+            </div>
+
+            @for (c of criteriosEval; track c.clave) {
+              <div class="weight-row">
+                <div class="weight-label" [title]="c.descripcion">{{ c.nombre }}</div>
+                <div class="weight-input">
+                  <dx-number-box
+                    [(value)]="pesosEval[c.clave]"
+                    [min]="0" [max]="100" [step]="5"
+                    format="#0'%'"
+                    [showSpinButtons]="true"
+                    width="92"
+                  ></dx-number-box>
+                </div>
+              </div>
+            }
+
+            <div class="weights-total" [class.ok]="pesosValidos" [class.bad]="!pesosValidos">
+              <span>Total</span>
+              <strong>{{ sumaPesos }}%</strong>
+            </div>
+            @if (!pesosValidos) {
+              <div class="weights-warn">
+                <i class="fas fa-exclamation-triangle mr-1"></i>Debe sumar 100%.
+              </div>
+            }
+            <button type="button" class="weights-reset" (click)="restablecerPesos()">
+              <i class="fas fa-undo mr-1"></i>Restablecer valores base
+            </button>
+          </div>
+        }
+      </aside>
+    </div>
+
+    <div class="bottom-actions">
+      <button type="button" class="btn btn-light" (click)="cancelar()">Cancelar</button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        data-tour="opportunity-continue"
+        [disabled]="guardando || cargando"
+        (click)="guardarYAgregarItems()"
+      >
+        @if (guardando) {
+          <span class="spinner-border spinner-border-sm mr-2"></span>
+        }
+        Guardar oportunidad y agregar ítems
+      </button>
+    </div>
+  </div>
+</section>
+
+<style>
+.request-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+}
+.request-card {
+  border-radius: 8px;
+  border: 1px solid #dde5ee;
+  box-shadow: none;
+}
+.flow-steps {
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+  background: #fff;
+  border: 1px solid #dde5ee;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.flow-step span {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e5eaf0;
+  color: #64748b;
+  font-size: 12px;
+}
+.flow-step.active {
+  color: #0f4f9e;
+}
+.flow-step.active span {
+  background: #0f4f9e;
+  color: #fff;
+}
+.flow-line {
+  height: 1px;
+  flex: 1;
+  background: #dde5ee;
+  margin: 0 12px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.field-error {
+  font-size: 11px;
+  color: #b42318;
+  margin-top: 2px;
+}
+.required { color: #b42318; }
+.dynamic-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  background: #f8fbff;
+  border: 1px solid #d8e8f8;
+  border-radius: 8px;
+  padding: 14px;
+}
+.dyn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.dyn-field label {
+  font-size: 11px;
+  color: #475569;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.field-help {
+  color: #0f72d5;
+  cursor: help;
+  display: inline-flex;
+  margin-left: 3px;
+  text-transform: none;
+}
+.span-2 {
+  grid-column: span 2;
+}
+.loading-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #64748b;
+  padding: 32px;
+}
+.request-side {
+  min-width: 0;
+}
+.side-panel {
+  background: #0f335b;
+  color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+}
+.side-kicker {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9fd0ff;
+  margin-bottom: 10px;
+}
+.side-panel h2 {
+  font-size: 20px;
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+.side-panel p {
+  color: #d7e9fb;
+  margin: 0;
+}
+.weights-panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.weights-panel .side-kicker { color: #2e75b6; margin-bottom: 4px; }
+.weights-panel h3 { font-size: 16px; font-weight: 700; margin: 0 0 6px; color: #1f335b; }
+.weights-desc { font-size: 12px; color: #64748b; margin: 0 0 12px; }
+.weight-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #f1f5f9;
+}
+.weight-label { font-size: 13px; color: #334155; font-weight: 600; }
+.weights-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.weights-total.ok { background: #e6f4ea; color: #1e7e34; }
+.weights-total.bad { background: #fdecea; color: #c0392b; }
+.weights-total strong { font-size: 15px; }
+.weights-warn { font-size: 12px; color: #c0392b; margin-top: 6px; }
+.weights-reset {
+  margin-top: 12px;
+  width: 100%;
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 12px;
+  color: #475569;
+  cursor: pointer;
+}
+.weights-reset:hover { background: #f1f5f9; }
+.bottom-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #f4f6f9;
+  border-top: 1px solid #dde5ee;
+  padding: 14px 0;
+  margin-top: 16px;
+}
+@media (max-width: 992px) {
+  .request-shell {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .span-2 {
+    grid-column: span 1;
+  }
+  .flow-steps {
+    overflow-x: auto;
+  }
+}
+</style>

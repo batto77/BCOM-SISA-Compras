@@ -1,0 +1,23 @@
+@use '../../shared/styles/item-specifications';
+
+.public-quote-content {
+  margin: 24px auto;
+  padding: 0 24px;
+  width: 100%;
+}
+
+.public-quote-content .specs-detail {
+  max-width: none;
+  width: calc(100vw - 48px);
+}
+
+@media (max-width: 760px) {
+  .public-quote-content {
+    margin: 16px auto;
+    padding: 0 12px;
+  }
+
+  .public-quote-content .specs-detail {
+    width: calc(100vw - 24px);
+  }
+}

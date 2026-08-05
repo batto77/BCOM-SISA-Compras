@@ -1,0 +1,67 @@
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+  <!-- Logo -->
+  <a [routerLink]="['/dashboard']" class="brand-link d-flex align-items-center justify-content-center py-2">
+    <img src="logo-sisa.jpeg" alt="SISA Compras" class="brand-image-full" />
+  </a>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- User panel -->
+    <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+      <div class="image">
+        <i class="fas fa-user-circle fa-2x text-white"></i>
+      </div>
+      <div class="info">
+        <a href="#" class="d-block text-white">Compras SISA</a>
+        <small class="text-white-50">Analista de Compras</small>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="mt-2" data-tour="main-menu">
+      <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+
+        @for (item of menuItems; track item.label) {
+          @if (item.route) {
+            <!-- Item simple -->
+            <li class="nav-item">
+              <a
+                [routerLink]="item.route"
+                routerLinkActive="active"
+                class="nav-link"
+                [attr.data-tour]="item.tourId"
+              >
+                <i class="{{ item.icon }} nav-icon"></i>
+                <p>{{ item.label }}</p>
+              </a>
+            </li>
+          } @else {
+            <!-- Item con submenú -->
+            <li class="nav-item" [class.menu-open]="isOpen(item.label)">
+              <a href="#" class="nav-link" [class.active]="isOpen(item.label)"
+                 [attr.data-tour]="item.tourId"
+                 (click)="toggleGroup(item.label); $event.preventDefault()">
+                <i class="{{ item.icon }} nav-icon"></i>
+                <p>
+                  {{ item.label }}
+                  <i class="right fas fa-angle-left"></i>
+                </p>
+              </a>
+              <ul class="nav nav-treeview" [style.display]="isOpen(item.label) ? 'block' : 'none'">
+                @for (child of item.children; track child.label) {
+                  <li class="nav-item">
+                    <a [routerLink]="child.route" routerLinkActive="active" class="nav-link">
+                      <i class="{{ child.icon }} nav-icon"></i>
+                      <p>{{ child.label }}</p>
+                    </a>
+                  </li>
+                }
+              </ul>
+            </li>
+          }
+        }
+
+      </ul>
+    </nav>
+  </div>
+</aside>

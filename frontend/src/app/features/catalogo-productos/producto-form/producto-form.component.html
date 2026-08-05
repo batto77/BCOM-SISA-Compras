@@ -1,0 +1,276 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">{{ modoEdicion ? 'Editar producto' : 'Nuevo producto' }}</h1>
+      </div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item"><a [routerLink]="['/catalogo-productos']">Catálogo de productos</a></li>
+          <li class="breadcrumb-item active">{{ modoEdicion ? 'Editar' : 'Nuevo' }}</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+    @if (exito) {
+      <div class="alert alert-success alert-dismissible">
+        <button type="button" class="close" (click)="exito = ''"><span>&times;</span></button>
+        <i class="fas fa-check-circle mr-2"></i>{{ exito }}
+      </div>
+    }
+
+    @if (cargando) {
+      <div class="text-center py-5">
+        <i class="fas fa-3x fa-sync-alt fa-spin text-primary"></i>
+      </div>
+    } @else {
+
+      <!-- Card 1: Datos básicos -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title"><i class="fas fa-box mr-2"></i>Datos básicos</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>Nombre <span class="text-danger">*</span></label>
+                <dx-text-box [value]="producto.nombre ?? ''" (valueChange)="producto.nombre = $event" placeholder="Nombre del producto..." [showClearButton]="true"></dx-text-box>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>Categoría <span class="text-danger">*</span></label>
+                <dx-select-box
+                  [items]="categorias"
+                  displayExpr="nombre"
+                  valueExpr="id"
+                  [(value)]="producto.categoria_producto_id"
+                  (onValueChanged)="onCategoriaChange($event.value)"
+                  placeholder="Seleccioná categoría..."
+                ></dx-select-box>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label>Modo por defecto</label>
+                <div class="btn-group d-flex mt-1" role="group">
+                  <button type="button" class="btn"
+                    [class.btn-primary]="producto.modo_defecto === 'funcional'"
+                    [class.btn-outline-primary]="producto.modo_defecto !== 'funcional'"
+                    (click)="setModo('funcional')">
+                    <i class="fas fa-check-circle mr-1"></i>Funcional
+                  </button>
+                  <button type="button" class="btn"
+                    [class.btn-warning]="producto.modo_defecto === 'modelos_especificos'"
+                    [class.btn-outline-warning]="producto.modo_defecto !== 'modelos_especificos'"
+                    (click)="setModo('modelos_especificos')">
+                    <i class="fas fa-list mr-1"></i>Modelos específicos
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <div class="form-group d-flex align-items-center mt-4">
+                <label class="mr-2 mb-0">Activo</label>
+                <dx-switch [value]="producto.activo ?? false" (valueChange)="producto.activo = $event"></dx-switch>
+              </div>
+            </div>
+          </div>
+
+          @if (esSoftwareOLicencia()) {
+            <div class="row">
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Fabricante / Proveedor</label>
+                  <dx-text-box [value]="producto.fabricante ?? ''" (valueChange)="producto.fabricante = $event" placeholder="Ej: Microsoft, Oracle..." [showClearButton]="true"></dx-text-box>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-group">
+                  <label>Versión</label>
+                  <dx-text-box [value]="producto.version ?? ''" (valueChange)="producto.version = $event" placeholder="Ej: 2024, 11.0..." [showClearButton]="true"></dx-text-box>
+                </div>
+              </div>
+            </div>
+          }
+
+          <div class="form-group">
+            <label>Etiquetas</label>
+            <dx-tag-box
+              [items]="etiquetas"
+              displayExpr="nombre"
+              valueExpr="id"
+              [(value)]="etiquetasSeleccionadas"
+              placeholder="Seleccioná etiquetas..."
+              [showSelectionControls]="true"
+              [searchEnabled]="true"
+            ></dx-tag-box>
+          </div>
+
+          <div class="form-group">
+            <label>Descripción</label>
+            <dx-text-box [value]="producto.descripcion ?? ''" (valueChange)="producto.descripcion = $event" placeholder="Descripción del producto..." [showClearButton]="true"></dx-text-box>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Especificaciones técnicas (dinámica) -->
+      @if (camposCategoria.length > 0) {
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-microchip mr-2"></i>Especificaciones técnicas</h3>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              @for (campo of camposCategoria; track campo.id) {
+                <div class="col-md-6 mb-3">
+                  <label>
+                    {{ campo.nombre }}
+                    @if (campo.es_obligatorio) { <span class="text-danger">*</span> }
+                    @if (campo.descripcion_ayuda) {
+                      <span class="ml-1 text-muted" style="cursor:help" [title]="campo.descripcion_ayuda">
+                        <i class="fas fa-question-circle"></i>
+                      </span>
+                    }
+                  </label>
+
+                  <!-- Tipo texto -->
+                  @if (campo.tipo_dato === 'texto') {
+                    <dx-text-box
+                      [value]="getEspecValor(campo.id)"
+                      (onValueChanged)="setEspecValor(campo.id, $event.value)"
+                      [placeholder]="campo.placeholder || ''"
+                      [showClearButton]="true"
+                    ></dx-text-box>
+                  }
+
+                  <!-- Tipo booleano -->
+                  @if (campo.tipo_dato === 'booleano') {
+                    <div class="d-flex align-items-center mt-1">
+                      <dx-switch
+                        [value]="getEspecBool(campo.id)"
+                        (onValueChanged)="setEspecBool(campo.id, $event.value)"
+                      ></dx-switch>
+                      <span class="ml-2 text-muted small">{{ getEspecBool(campo.id) ? 'Sí' : 'No' }}</span>
+                    </div>
+                  }
+
+                  <!-- Tipo número (con variantes según tiene_cantidad y tiene_unidad) -->
+                  @if (campo.tipo_dato === 'numero') {
+                    <div class="d-flex gap-2">
+                      @if (campo.tiene_cantidad) {
+                        <div style="width:100px">
+                          <dx-number-box
+                            [value]="getEspecCantidad(campo.id) ?? 0"
+                            (onValueChanged)="setEspecCantidad(campo.id, $event.value)"
+                            placeholder="Cant."
+                          ></dx-number-box>
+                        </div>
+                        <span class="align-self-center text-muted">×</span>
+                      }
+                      @if (campo.tiene_unidad) {
+                        <div class="flex-grow-1">
+                          <dx-number-box
+                            [value]="getEspecCantidad(campo.id) ?? 0"
+                            (onValueChanged)="setEspecCantidad(campo.id, $event.value)"
+                            [placeholder]="campo.placeholder || 'Valor'"
+                          ></dx-number-box>
+                        </div>
+                        <div style="width:130px">
+                          <dx-select-box
+                            [items]="campo.opciones_unidad"
+                            displayExpr="simbolo"
+                            valueExpr="id"
+                            [value]="getEspecUnidad(campo.id)"
+                            (onValueChanged)="setEspecUnidad(campo.id, $event.value)"
+                            placeholder="Unidad"
+                            [showClearButton]="true"
+                          ></dx-select-box>
+                        </div>
+                      } @else if (!campo.tiene_cantidad) {
+                        <dx-number-box
+                          [value]="getEspecCantidad(campo.id) ?? 0"
+                          (onValueChanged)="setEspecCantidad(campo.id, $event.value)"
+                          [placeholder]="campo.placeholder || 'Valor'"
+                          class="flex-grow-1"
+                        ></dx-number-box>
+                      }
+                    </div>
+                  }
+
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Card 3: Modelos alternativos (solo si modo = modelos_especificos) -->
+      @if (producto.modo_defecto === 'modelos_especificos') {
+        <div class="card">
+          <div class="card-header d-flex align-items-center">
+            <h3 class="card-title flex-grow-1"><i class="fas fa-list-ul mr-2"></i>Modelos alternativos</h3>
+            <button class="btn btn-success btn-sm" (click)="agregarModelo()">
+              <i class="fas fa-plus mr-1"></i>Agregar modelo
+            </button>
+          </div>
+          <div class="card-body">
+            @if (modelos.length === 0) {
+              <p class="text-muted text-center">No hay modelos. Agregá el primero.</p>
+            }
+            @for (modelo of modelos; track $index) {
+              <div class="row align-items-center mb-2">
+                <div class="col-md-4">
+                  <dx-text-box [value]="modelo.fabricante ?? ''" (valueChange)="modelo.fabricante = $event" placeholder="Fabricante..." [showClearButton]="true"></dx-text-box>
+                </div>
+                <div class="col-md-5">
+                  <dx-text-box [value]="modelo.modelo ?? ''" (valueChange)="modelo.modelo = $event" placeholder="Modelo / referencia..." [showClearButton]="true"></dx-text-box>
+                </div>
+                <div class="col-md-2 d-flex align-items-center">
+                  <label class="mr-2 mb-0 small">Primario</label>
+                  <dx-switch [value]="modelo.es_primario ?? false" (valueChange)="modelo.es_primario = $event"></dx-switch>
+                </div>
+                <div class="col-md-1">
+                  <button class="btn btn-xs btn-outline-danger" (click)="eliminarModelo($index)">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Botones -->
+      <div class="d-flex justify-content-end mb-4">
+        <button class="btn btn-secondary mr-2" (click)="cancelar()">
+          <i class="fas fa-times mr-1"></i>Cancelar
+        </button>
+        <button class="btn btn-primary" (click)="guardar()" [disabled]="guardando">
+          @if (guardando) {
+            <i class="fas fa-spinner fa-spin mr-1"></i>Guardando...
+          } @else {
+            <i class="fas fa-save mr-1"></i>Guardar producto
+          }
+        </button>
+      </div>
+
+    }
+  </div>
+</div>

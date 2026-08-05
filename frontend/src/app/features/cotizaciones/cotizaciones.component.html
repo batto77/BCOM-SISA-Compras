@@ -1,0 +1,200 @@
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6"><h1 class="m-0">Cotizaciones</h1></div>
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item"><a [routerLink]="['/dashboard']">Inicio</a></li>
+          <li class="breadcrumb-item active">Cotizaciones</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="container-fluid">
+
+    @if (error) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="error = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
+      </div>
+    }
+    @if (recordatorioMsg) {
+      <div class="alert alert-success alert-dismissible">
+        <button type="button" class="close" (click)="recordatorioMsg = ''"><span>&times;</span></button>
+        <i class="fas fa-envelope-open-text mr-2"></i>{{ recordatorioMsg }}
+      </div>
+    }
+    @if (recordatorioError) {
+      <div class="alert alert-warning alert-dismissible">
+        <button type="button" class="close" (click)="recordatorioError = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ recordatorioError }}
+      </div>
+    }
+
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <h3 class="card-title flex-grow-1">
+          {{ cotizaciones.length }} cotización{{ cotizaciones.length !== 1 ? 'es' : '' }}
+        </h3>
+      </div>
+      <div class="card-body p-0 position-relative">
+
+        @if (cargando) {
+          <div class="overlay">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+          </div>
+        }
+
+        <dx-data-grid
+          #grid
+          [dataSource]="cotizaciones"
+          [showBorders]="false"
+          [rowAlternationEnabled]="true"
+          [hoverStateEnabled]="true"
+          [columnAutoWidth]="true"
+        >
+          <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
+          <dxo-filter-row [visible]="true"></dxo-filter-row>
+          <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-toolbar>
+            <dxi-item location="before" template="btnLimpiar"></dxi-item>
+            <dxi-item name="searchPanel"></dxi-item>
+          </dxo-toolbar>
+          <div *dxTemplate="let _ of 'btnLimpiar'">
+            <button class="btn btn-sm btn-outline-secondary" (click)="limpiarFiltros()" title="Limpiar filtros">
+              <i class="fas fa-eraser mr-1"></i>Limpiar filtros
+            </button>
+          </div>
+
+          <dxi-column
+            dataField="solicitud.numero"
+            caption="ID DAV"
+            [width]="145"
+            [fixed]="true"
+            fixedPosition="left"
+            cellTemplate="oportunidadIdTpl"
+          ></dxi-column>
+          <div *dxTemplate="let c of 'oportunidadIdTpl'">
+            <a [routerLink]="['/solicitudes', c.data.solicitud_id]" class="text-primary">
+              {{ c.data.solicitud?.numero ?? ('#' + c.data.solicitud_id) }}
+            </a>
+          </div>
+
+          <dxi-column
+            caption="Oportunidad"
+            [minWidth]="200"
+            cellTemplate="solicitudTpl"
+            [allowFiltering]="false"
+          ></dxi-column>
+          <div *dxTemplate="let c of 'solicitudTpl'">
+            <a [routerLink]="['/solicitudes', c.data.solicitud_id]" class="text-primary">
+              {{ c.data.solicitud?.titulo ?? ('Oportunidad #' + c.data.solicitud_id) }}
+            </a>
+          </div>
+
+          <dxi-column
+            caption="Proveedor"
+            [width]="200"
+            cellTemplate="proveedorTpl"
+            [allowFiltering]="false"
+          ></dxi-column>
+          <div *dxTemplate="let c of 'proveedorTpl'">
+            {{ c.data.proveedor?.razon_social ?? '—' }}
+          </div>
+
+          <dxi-column
+            caption="Estado"
+            [width]="120"
+            cellTemplate="estadoTpl"
+            [allowFiltering]="false"
+          ></dxi-column>
+          <div *dxTemplate="let c of 'estadoTpl'">
+            <span class="badge" [ngClass]="getEstadoBadgeClass(c.data.estado)">
+              {{ c.data.estado }}
+            </span>
+          </div>
+
+          <dxi-column
+            dataField="solicitud.fecha_requerida"
+            caption="Fecha requerida"
+            dataType="date"
+            [width]="135"
+            format="dd/MM/yyyy"
+          ></dxi-column>
+
+          <dxi-column
+            dataField="fecha_limite_respuesta"
+            caption="Límite respuesta"
+            dataType="date"
+            [width]="130"
+            format="dd/MM/yyyy"
+          ></dxi-column>
+
+          <dxi-column
+            dataField="created_at"
+            caption="Creada"
+            dataType="datetime"
+            [width]="145"
+            format="dd/MM/yyyy HH:mm"
+          ></dxi-column>
+
+          <dxi-column
+            caption="Acciones"
+            [width]="180"
+            cellTemplate="accionesTpl"
+            [allowFiltering]="false"
+            [allowSorting]="false"
+          ></dxi-column>
+          <div *dxTemplate="let c of 'accionesTpl'">
+            <a
+              [routerLink]="['/cotizaciones', c.data.id]"
+              class="btn btn-xs btn-outline-primary"
+              title="Ver / registrar respuesta"
+            >
+              <i class="fas fa-edit"></i>
+            </a>
+            @if (c.data.token) {
+              <a
+                [routerLink]="['/cotizar', c.data.token]"
+                class="btn btn-xs btn-outline-info ml-1"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Abrir vista pública del proveedor"
+                aria-label="Abrir vista pública del proveedor"
+              >
+                <i class="fas fa-link"></i>
+              </a>
+            }
+            <a
+              [routerLink]="['/cotizaciones', c.data.id, 'versiones']"
+              class="btn btn-xs btn-outline-secondary ml-1"
+              title="Ver historial de versiones"
+            >
+              <i class="fas fa-history"></i>
+            </a>
+            @if (c.data.estado === 'invitada' && c.data.token) {
+              <button
+                class="btn btn-xs btn-outline-warning ml-1"
+                title="Enviar recordatorio al proveedor"
+                [disabled]="enviandoRecordatorio[c.data.id]"
+                (click)="enviarRecordatorio(c.data.id)"
+              >
+                @if (enviandoRecordatorio[c.data.id]) {
+                  <span class="spinner-border spinner-border-sm"></span>
+                } @else {
+                  <i class="fas fa-bell"></i>
+                }
+              </button>
+            }
+          </div>
+
+        </dx-data-grid>
+
+      </div>
+    </div>
+
+  </div>
+</div>
