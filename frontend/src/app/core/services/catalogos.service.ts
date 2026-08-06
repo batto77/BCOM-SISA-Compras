@@ -45,6 +45,10 @@ export class CatalogosService extends ApiService {
       catchError(() => of(null)));
   }
 
+  clonarCategoria(id: number, nombre: string): Observable<CategoriaProducto> {
+    return this.http.post<CategoriaProducto>(`${this.baseUrl}/categorias-producto/${id}/clonar`, { nombre });
+  }
+
   getCamposCategoria(categoriaId: number): Observable<DefinicionCampo[]> {
     return this.http.get<{campos: DefinicionCampo[]}>(
       `${this.baseUrl}/categorias/${categoriaId}/campos`

@@ -28,6 +28,7 @@ export interface SolicitudCompraCreate {
   rubro_ids?: number[];
   fecha_requerida?: string; // YYYY-MM-DD
   prioridad: 'urgente' | 'alta' | 'normal' | 'baja';
+  moneda?: string;
   notas?: string;
   /** Pesos de los criterios de evaluación para esta oportunidad (suman 100) */
   pesos_evaluacion?: Record<string, number>;
@@ -55,6 +56,7 @@ export interface SolicitudCompraOut {
   rubro_ids?: number[];
   fecha_requerida?: string;
   prioridad: string;
+  moneda: string;
   estado: string;
   version_actual: number;
   notas?: string;

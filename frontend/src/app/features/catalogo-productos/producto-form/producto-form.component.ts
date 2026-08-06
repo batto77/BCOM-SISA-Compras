@@ -39,6 +39,7 @@ import { UnidadMedida } from '../../../core/models/parametros.model';
 })
 export class ProductoFormComponent implements OnInit {
   modoEdicion = false;
+  modoClonar = false;
   productoId: number | null = null;
   cargando = false;
   guardando = false;
@@ -48,6 +49,7 @@ export class ProductoFormComponent implements OnInit {
   categorias: CategoriaProducto[] = [];
   etiquetas: Etiqueta[] = [];
   camposCategoria: DefinicionCampo[] = [];
+  productosExistentes: Producto[] = [];
 
   // Modelo principal
   producto: Partial<Producto> = {
@@ -73,23 +75,33 @@ export class ProductoFormComponent implements OnInit {
   ngOnInit(): void {
     this.catalogosService.getCategorias().subscribe({ next: c => { this.categorias = c; } });
     this.etiquetasService.getEtiquetas().subscribe({ next: e => { this.etiquetas = e; } });
+    this.catalogosService.getProductos().subscribe({ next: p => { this.productosExistentes = p; } });
 
     const id = this.route.snapshot.paramMap.get('id');
+    this.modoClonar = this.route.snapshot.url.some(seg => seg.path === 'clonar');
+
     if (id) {
-      this.modoEdicion = true;
-      this.productoId = +id;
-      this.cargarProducto(this.productoId);
+      if (this.modoClonar) {
+        this.cargarProducto(+id, true);
+      } else {
+        this.modoEdicion = true;
+        this.productoId = +id;
+        this.cargarProducto(this.productoId);
+      }
     }
   }
 
-  cargarProducto(id: number): void {
+  cargarProducto(id: number, paraClonar = false): void {
     this.cargando = true;
     this.catalogosService.getProducto(id).subscribe({
       next: prod => {
         if (prod) {
           this.producto = { ...prod };
+          if (paraClonar) {
+            this.producto.nombre = `${prod.nombre} (copia)`;
+          }
           this.etiquetasSeleccionadas = (prod.etiquetas || []).map(e => e.id);
-          this.modelos = [...(prod.modelos_alternativos || [])];
+          this.modelos = (prod.modelos_alternativos || []).map(m => ({ ...m, id: undefined }));
           if (prod.categoria_producto_id) {
             this.cargarCamposCategoria(prod.categoria_producto_id, prod.especificaciones);
           }
@@ -98,6 +110,14 @@ export class ProductoFormComponent implements OnInit {
       },
       error: () => { this.error = 'No se pudo cargar el producto.'; this.cargando = false; },
     });
+  }
+
+  nombreDuplicado(): boolean {
+    const nombre = this.producto.nombre?.trim().toLowerCase();
+    if (!nombre) return false;
+    return this.productosExistentes.some(
+      p => p.nombre.trim().toLowerCase() === nombre && p.id !== this.productoId,
+    );
   }
 
   onCategoriaChange(categoriaId: number): void {
@@ -191,6 +211,10 @@ export class ProductoFormComponent implements OnInit {
   guardar(): void {
     if (!this.producto.nombre?.trim()) {
       this.error = 'El nombre del producto es obligatorio.';
+      return;
+    }
+    if (this.nombreDuplicado()) {
+      this.error = 'Ya existe un producto con ese nombre. Elegí un nombre distinto.';
       return;
     }
     this.guardando = true;

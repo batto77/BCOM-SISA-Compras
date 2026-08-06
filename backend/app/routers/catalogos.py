@@ -14,6 +14,7 @@ from app.models.catalogos import ModeloProducto
 from app.database import get_db
 from app.schemas.catalogos import (
     AsignarUnidadesRequest,
+    CategoriaProductoClonarRequest,
     CategoriaProductoCreate,
     CategoriaProductoListOut,
     CategoriaProductoOut,
@@ -60,6 +61,10 @@ def listar_categorias_producto(
 def crear_categoria_producto(
     obj_in: CategoriaProductoCreate, db: Session = Depends(get_db)
 ):
+    if crud_categoria_producto.get_by_nombre(db, nombre=obj_in.nombre):
+        raise HTTPException(
+            status_code=409, detail="Ya existe una categoría con ese nombre."
+        )
     return crud_categoria_producto.create(db, obj_in=obj_in)
 
 
@@ -78,7 +83,31 @@ def actualizar_categoria_producto(
     obj = crud_categoria_producto.get(db, id)
     if not obj:
         raise HTTPException(status_code=404, detail="Categoría de producto no encontrada")
+    if obj_in.nombre and crud_categoria_producto.get_by_nombre(
+        db, nombre=obj_in.nombre, exclude_id=id
+    ):
+        raise HTTPException(
+            status_code=409, detail="Ya existe una categoría con ese nombre."
+        )
     return crud_categoria_producto.update(db, db_obj=obj, obj_in=obj_in)
+
+
+@router.post(
+    "/categorias-producto/{id}/clonar",
+    response_model=CategoriaProductoOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def clonar_categoria_producto(
+    id: int, obj_in: CategoriaProductoClonarRequest, db: Session = Depends(get_db)
+):
+    origen = crud_categoria_producto.get(db, id)
+    if not origen:
+        raise HTTPException(status_code=404, detail="Categoría de producto no encontrada")
+    if crud_categoria_producto.get_by_nombre(db, nombre=obj_in.nombre):
+        raise HTTPException(
+            status_code=409, detail="Ya existe una categoría con ese nombre."
+        )
+    return crud_categoria_producto.clonar(db, origen=origen, nombre_nuevo=obj_in.nombre)
 
 
 @router.delete("/categorias-producto/{id}", response_model=CategoriaProductoOut)
@@ -178,6 +207,10 @@ def listar_productos(
 
 @router.post("/productos", response_model=ProductoOut, status_code=status.HTTP_201_CREATED)
 def crear_producto(obj_in: ProductoCreate, db: Session = Depends(get_db)):
+    if crud_producto.get_by_nombre(db, nombre=obj_in.nombre):
+        raise HTTPException(
+            status_code=409, detail="Ya existe un producto con ese nombre."
+        )
     return crud_producto.create_with_relaciones(db, obj_in=obj_in)
 
 
@@ -196,6 +229,10 @@ def actualizar_producto(
     obj = crud_producto.get(db, id)
     if not obj:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
+    if obj_in.nombre and crud_producto.get_by_nombre(db, nombre=obj_in.nombre, exclude_id=id):
+        raise HTTPException(
+            status_code=409, detail="Ya existe un producto con ese nombre."
+        )
     return crud_producto.update_with_relaciones(db, db_obj=obj, obj_in=obj_in)
 
 

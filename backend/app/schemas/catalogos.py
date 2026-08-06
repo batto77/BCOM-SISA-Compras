@@ -100,6 +100,10 @@ class AsignarUnidadesRequest(BaseModel):
     unidad_ids: List[int]
 
 
+class CategoriaProductoClonarRequest(BaseModel):
+    nombre: str = Field(..., max_length=100)
+
+
 # --- ValorEspecificacion ---
 
 class ValorEspecificacionBase(BaseModel):

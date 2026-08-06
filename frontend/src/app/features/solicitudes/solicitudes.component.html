@@ -50,6 +50,9 @@
           <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
           <dxo-filter-row [visible]="true"></dxo-filter-row>
           <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+          <dxo-group-panel [visible]="true"></dxo-group-panel>
+          <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
           <dxo-toolbar>
             <dxi-item location="before" template="btnLimpiar"></dxi-item>
             <dxi-item name="searchPanel"></dxi-item>
@@ -67,33 +70,38 @@
             [fixed]="true"
             fixedPosition="left"
           ></dxi-column>
-          <dxi-column caption="Versión" [width]="86" cellTemplate="versionTpl"></dxi-column>
+          <dxi-column dataField="version_actual" caption="Versión" [width]="86" cellTemplate="versionTpl"></dxi-column>
           <div *dxTemplate="let c of 'versionTpl'">
             <span class="badge badge-primary">v{{ c.data.version_actual || 1 }}</span>
           </div>
-          <dxi-column dataField="titulo" caption="Título" [minWidth]="220"></dxi-column>
+          <dxi-column name="numeroDav" dataField="numero" caption="Número DAV" [width]="130" cellTemplate="davTpl"></dxi-column>
+          <div *dxTemplate="let c of 'davTpl'">
+            <code>{{ c.data.numero ?? '—' }}</code>
+          </div>
+          <dxi-column dataField="moneda" caption="Moneda" [width]="90"></dxi-column>
+          <dxi-column dataField="titulo" caption="Oportunidad" [minWidth]="220"></dxi-column>
           <dxi-column dataField="solicitante_nombre" caption="Solicitante" [width]="160"></dxi-column>
           <dxi-column dataField="aprobador" caption="Aprobador" [width]="160"></dxi-column>
-          <dxi-column caption="Rubros" [minWidth]="180" cellTemplate="rubrosTpl" [allowFiltering]="false"></dxi-column>
+          <dxi-column caption="Rubros" [minWidth]="180" cellTemplate="rubrosTpl" [calculateCellValue]="getRubrosTexto" [allowGrouping]="true"></dxi-column>
           <div *dxTemplate="let c of 'rubrosTpl'">
             {{ getRubrosTexto(c.data) }}
           </div>
 
-          <dxi-column caption="Prioridad" [width]="110" cellTemplate="prioridadTpl" [allowFiltering]="false"></dxi-column>
+          <dxi-column dataField="prioridad" caption="Prioridad" [width]="110" cellTemplate="prioridadTpl"></dxi-column>
           <div *dxTemplate="let c of 'prioridadTpl'">
             <span class="badge" [ngClass]="getPrioridadBadgeClass(c.data.prioridad)">
               {{ c.data.prioridad }}
             </span>
           </div>
 
-          <dxi-column caption="Estado" [width]="120" cellTemplate="estadoTpl" [allowFiltering]="false"></dxi-column>
+          <dxi-column dataField="estado" caption="Estado" [width]="120" cellTemplate="estadoTpl"></dxi-column>
           <div *dxTemplate="let c of 'estadoTpl'">
             <span class="badge" [ngClass]="getEstadoBadgeClass(c.data.estado)">
               {{ c.data.estado | titlecase }}
             </span>
           </div>
 
-          <dxi-column caption="Ítems" [width]="70" cellTemplate="itemsTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <dxi-column caption="Ítems" [width]="70" cellTemplate="itemsTpl" [calculateCellValue]="getItemsCount"></dxi-column>
           <div *dxTemplate="let c of 'itemsTpl'">
             <span class="badge badge-light border">{{ c.data.items?.length ?? 0 }}</span>
           </div>
@@ -101,7 +109,7 @@
           <dxi-column dataField="fecha_requerida" caption="Fecha requerida" dataType="date" [width]="130" format="dd/MM/yyyy"></dxi-column>
           <dxi-column dataField="created_at" caption="Creada" dataType="datetime" [width]="140" format="dd/MM/yyyy HH:mm"></dxi-column>
 
-          <dxi-column caption="Acciones" [width]="118" cellTemplate="accionesTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <dxi-column caption="Acciones" [width]="118" cellTemplate="accionesTpl" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
           <div *dxTemplate="let c of 'accionesTpl'">
             <a [routerLink]="['/solicitudes', c.data.id]" class="btn btn-xs btn-outline-primary" title="Ver detalle">
               <i class="fas fa-eye"></i>

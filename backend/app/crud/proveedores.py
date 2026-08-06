@@ -219,6 +219,12 @@ class CRUDProveedor(CRUDBase[Proveedor, ProveedorCreate, ProveedorUpdate]):
             db.refresh(obj)
         return obj
 
+    def get_by_nit(self, db: Session, *, nit: str) -> Optional[Proveedor]:
+        nit_norm = nit.strip()
+        if not nit_norm:
+            return None
+        return db.query(Proveedor).filter(Proveedor.nit == nit_norm).first()
+
 
 class CRUDContactoProveedor(
     CRUDBase[ContactoProveedor, ContactoProveedorCreate, ContactoProveedorUpdate]

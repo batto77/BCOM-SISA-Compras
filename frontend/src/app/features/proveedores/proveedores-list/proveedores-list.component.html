@@ -21,12 +21,30 @@
         <i class="fas fa-exclamation-triangle mr-2"></i>{{ error }}
       </div>
     }
+    @if (importError) {
+      <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" (click)="importError = ''"><span>&times;</span></button>
+        <i class="fas fa-exclamation-triangle mr-2"></i>{{ importError }}
+      </div>
+    }
 
     <div class="card">
       <div class="card-header d-flex align-items-center">
         <h3 class="card-title flex-grow-1">
           {{ proveedores.length }} proveedor{{ proveedores.length !== 1 ? 'es' : '' }}
         </h3>
+        <button class="btn btn-outline-secondary btn-sm mr-2" (click)="descargarPlantilla()" title="Descargar plantilla para carga masiva">
+          <i class="fas fa-file-excel mr-1"></i>Descargar plantilla
+        </button>
+        <label class="btn btn-outline-primary btn-sm mr-2 mb-0" title="Cargar proveedores desde un archivo .csv o .xlsx">
+          @if (importando) {
+            <span class="spinner-border spinner-border-sm mr-1"></span>
+          } @else {
+            <i class="fas fa-file-upload mr-1"></i>
+          }
+          Importar proveedores
+          <input type="file" hidden accept=".csv,.xlsx" (change)="onArchivoSeleccionado($event)" [disabled]="importando">
+        </label>
         <a [routerLink]="['/proveedores/nuevo']" class="btn btn-primary btn-sm">
           <i class="fas fa-plus mr-1"></i>Nuevo proveedor
         </a>
@@ -50,6 +68,9 @@
           <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
           <dxo-filter-row [visible]="true"></dxo-filter-row>
           <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+          <dxo-group-panel [visible]="true"></dxo-group-panel>
+          <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
           <dxo-toolbar>
             <dxi-item location="before" template="btnLimpiar"></dxi-item>
             <dxi-item name="searchPanel"></dxi-item>
@@ -72,7 +93,7 @@
           <dxi-column dataField="razon_social" caption="Razón social" [minWidth]="200"></dxi-column>
           <dxi-column dataField="nombre_comercial" caption="Nombre comercial"></dxi-column>
           <dxi-column dataField="pais" caption="País" [width]="120"></dxi-column>
-          <dxi-column caption="Idioma" [width]="90" cellTemplate="idiomaTpl"></dxi-column>
+          <dxi-column dataField="idioma" caption="Idioma" [width]="90" cellTemplate="idiomaTpl"></dxi-column>
           <div *dxTemplate="let c of 'idiomaTpl'">
             <span class="badge" [class.badge-primary]="c.data.idioma === 'ES'" [class.badge-info]="c.data.idioma === 'EN'">
               {{ c.data.idioma }}
@@ -91,19 +112,19 @@
               <span class="text-muted small">Sin calificar</span>
             }
           </div>
-          <dxi-column caption="Estado" [width]="90" cellTemplate="estadoTpl"></dxi-column>
+          <dxi-column dataField="estado" caption="Estado" [width]="90" cellTemplate="estadoTpl"></dxi-column>
           <div *dxTemplate="let c of 'estadoTpl'">
             <span class="badge" [class.badge-success]="c.data.estado === 'activo'" [class.badge-secondary]="c.data.estado !== 'activo'">
               {{ c.data.estado }}
             </span>
           </div>
-          <dxi-column caption="Etiquetas" cellTemplate="etiquetasTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <dxi-column caption="Etiquetas" cellTemplate="etiquetasTpl" [calculateCellValue]="getEtiquetasTexto"></dxi-column>
           <div *dxTemplate="let c of 'etiquetasTpl'">
             @for (et of getEtiquetasProveedor(c.data); track et.id) {
               <span class="badge mr-1" [style.background]="et.color || '#6c757d'" style="color:#fff">{{ et.nombre }}</span>
             }
           </div>
-          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTpl" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
           <div *dxTemplate="let c of 'accionesTpl'">
             <a [routerLink]="['/proveedores', c.data.id, 'editar']" class="btn btn-xs btn-outline-primary mr-1" title="Editar">
               <i class="fas fa-pencil-alt"></i>
@@ -116,3 +137,47 @@
 
   </div>
 </div>
+
+<!-- Popup resultado de importación -->
+<dx-popup
+  [(visible)]="popupResultadoVisible"
+  title="Resultado de la importación"
+  [width]="520"
+  [height]="'auto'"
+  [showCloseButton]="true"
+>
+  <div *dxTemplate="let d of 'content'">
+    @if (resultadoImportacion) {
+      <div class="alert alert-success">
+        <i class="fas fa-check-circle mr-2"></i>{{ resultadoImportacion.creados }} proveedor{{ resultadoImportacion.creados !== 1 ? 'es' : '' }} creado{{ resultadoImportacion.creados !== 1 ? 's' : '' }}.
+      </div>
+
+      @if (resultadoImportacion.omitidos_duplicados.length) {
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          {{ resultadoImportacion.omitidos_duplicados.length }} fila{{ resultadoImportacion.omitidos_duplicados.length !== 1 ? 's' : '' }} omitida{{ resultadoImportacion.omitidos_duplicados.length !== 1 ? 's' : '' }} por NIT duplicado:
+          <div class="mt-1">
+            @for (nit of resultadoImportacion.omitidos_duplicados; track nit) {
+              <span class="badge badge-light border mr-1">{{ nit }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      @if (resultadoImportacion.errores.length) {
+        <div class="alert alert-danger">
+          <i class="fas fa-times-circle mr-2"></i>{{ resultadoImportacion.errores.length }} fila{{ resultadoImportacion.errores.length !== 1 ? 's' : '' }} con error:
+          <ul class="mb-0 mt-1">
+            @for (err of resultadoImportacion.errores; track err.fila) {
+              <li>Fila {{ err.fila }}: {{ err.motivo }}</li>
+            }
+          </ul>
+        </div>
+      }
+    }
+
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-primary" (click)="popupResultadoVisible = false">Cerrar</button>
+    </div>
+  </div>
+</dx-popup>

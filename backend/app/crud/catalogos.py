@@ -3,6 +3,7 @@ import re
 import unicodedata
 from typing import List, Optional, Tuple
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.crud.base import CRUDBase
@@ -66,6 +67,53 @@ class CRUDCategoriaProducto(
             db.commit()
             db.refresh(obj)
         return obj
+
+    def get_by_nombre(
+        self, db: Session, *, nombre: str, exclude_id: Optional[int] = None
+    ) -> Optional[CategoriaProducto]:
+        query = db.query(CategoriaProducto).filter(
+            func.lower(func.trim(CategoriaProducto.nombre)) == nombre.strip().lower(),
+        )
+        if exclude_id is not None:
+            query = query.filter(CategoriaProducto.id != exclude_id)
+        return query.first()
+
+    def clonar(
+        self, db: Session, *, origen: CategoriaProducto, nombre_nuevo: str
+    ) -> CategoriaProducto:
+        nueva = CategoriaProducto(
+            nombre=nombre_nuevo,
+            slug=self._unique_slug(db, nombre_nuevo),
+            tipo=origen.tipo,
+            icono=origen.icono,
+            descripcion=origen.descripcion,
+            activo=True,
+        )
+        db.add(nueva)
+        db.flush()
+
+        for campo in origen.campos:
+            nuevo_campo = DefinicionCampo(
+                categoria_producto_id=nueva.id,
+                nombre=campo.nombre,
+                clave=campo.clave,
+                orden=campo.orden,
+                tipo_dato=campo.tipo_dato,
+                es_obligatorio=campo.es_obligatorio,
+                es_campo_base=campo.es_campo_base,
+                tiene_cantidad=campo.tiene_cantidad,
+                tiene_unidad=campo.tiene_unidad,
+                unidad_default_id=campo.unidad_default_id,
+                placeholder=campo.placeholder,
+                descripcion_ayuda=campo.descripcion_ayuda,
+                activo=campo.activo,
+            )
+            nuevo_campo.opciones_unidad = list(campo.opciones_unidad)
+            db.add(nuevo_campo)
+
+        db.commit()
+        db.refresh(nueva)
+        return nueva
 
 
 class CRUDDefinicionCampo(
@@ -136,6 +184,17 @@ class CRUDDefinicionCampo(
 
 
 class CRUDProducto(CRUDBase[Producto, ProductoCreate, ProductoUpdate]):
+    def get_by_nombre(
+        self, db: Session, *, nombre: str, exclude_id: Optional[int] = None
+    ) -> Optional[Producto]:
+        query = db.query(Producto).filter(
+            Producto.activo.is_(True),
+            func.lower(func.trim(Producto.nombre)) == nombre.strip().lower(),
+        )
+        if exclude_id is not None:
+            query = query.filter(Producto.id != exclude_id)
+        return query.first()
+
     def create_with_relaciones(
         self, db: Session, *, obj_in: ProductoCreate
     ) -> Producto:

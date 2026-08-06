@@ -232,10 +232,13 @@ def comparativo_solicitud(id: int, db: Session = Depends(get_db)):
 
     criterios_base = db.query(CriterioEvaluacion).order_by(CriterioEvaluacion.orden).all()
     pesos = resolver_pesos(solicitud.pesos_evaluacion, criterios_base)
+    moneda_oportunidad = getattr(solicitud, "moneda", "COP") or "COP"
     evaluacion = calcular_evaluacion(
+        db=db,
         items_solicitud=data["items_solicitud"],
         cotizaciones=data["cotizaciones"],
         pesos=pesos,
+        moneda_oportunidad=moneda_oportunidad,
     )
     # Criterios (metadatos para la UI: nombre, orden)
     evaluacion["criterios"] = [

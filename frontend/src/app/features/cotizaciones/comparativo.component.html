@@ -104,12 +104,17 @@
                             [title]="ofertaItem(item.id, cot.id) ? 'Clic para adjudicar este ítem a este proveedor' : 'No oferta este ítem'">
                           @if (ofertaItem(item.id, cot.id)) {
                             <div class="font-weight-bold">
-                              {{ getCandidato(item.id, cot.id)?.precio_unitario | number:'1.2-2' }}
+                              {{ getCandidato(item.id, cot.id)?.precio_unitario_original | number:'1.2-2' }}
+                              <span class="small text-muted">{{ getMonedaLabel(getCandidato(item.id, cot.id)?.moneda_original ?? 'COP') }}</span>
                               @if (esMejorItem(item.id, cot.id)) {
                                 <i class="fas fa-star text-warning ml-1" title="Mejor opción para este ítem"></i>
                               }
                             </div>
-                            <div class="small text-muted">
+                            <div class="small text-secondary border-top pt-1 mt-1">
+                              {{ getCandidato(item.id, cot.id)?.precio_unitario_convertido | number:'1.2-2' }}
+                              <span class="text-muted">{{ getMonedaLabel(monedaOportunidad) }}</span>
+                            </div>
+                            <div class="small text-muted mt-1">
                               {{ getCandidato(item.id, cot.id)?.tiempo_entrega_dias ?? '—' }} días ·
                               pje {{ getCandidato(item.id, cot.id)?.puntaje | number:'1.0-0' }}
                             </div>
@@ -146,22 +151,41 @@
               </div>
             }
             @if (resumenPorProveedor.length > 0) {
-              <table class="table table-sm w-auto">
+              <table class="table table-sm">
                 <thead class="thead-light">
-                  <tr><th>Proveedor</th><th class="text-right">Ítems</th><th class="text-right">Subtotal</th></tr>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th class="text-right">Cant.</th>
+                    <th class="text-right">Ítems</th>
+                    <th class="text-right">Subtotal (Original)</th>
+                    <th class="text-right">Subtotal ({{ getMonedaLabel(monedaOportunidad) }})</th>
+                  </tr>
                 </thead>
                 <tbody>
                   @for (r of resumenPorProveedor; track r.cotizacionId) {
                     <tr>
-                      <td>{{ r.nombre }}</td>
+                      <td>
+                        {{ r.nombre }}
+                        @if (r.monedas.length > 0) {
+                          <div class="small text-muted">
+                            @for (m of r.monedas; track m) {
+                              <span class="badge badge-light border mr-1">{{ getMonedaLabel(m) }}</span>
+                            }
+                          </div>
+                        }
+                      </td>
+                      <td class="text-right font-weight-bold">{{ r.items }}</td>
                       <td class="text-right">{{ r.items }}</td>
-                      <td class="text-right">{{ r.subtotal | number:'1.2-2' }}</td>
+                      <td class="text-right text-muted">{{ r.subtotal_original | number:'1.2-2' }}</td>
+                      <td class="text-right font-weight-bold">{{ r.subtotal_convertido | number:'1.2-2' }}</td>
                     </tr>
                   }
                   <tr class="font-weight-bold border-top">
                     <td>TOTAL ADJUDICADO</td>
                     <td class="text-right">{{ itemsAdjudicados }}</td>
-                    <td class="text-right">{{ totalAdjudicado | number:'1.2-2' }}</td>
+                    <td class="text-right">{{ itemsAdjudicados }}</td>
+                    <td class="text-right text-muted">—</td>
+                    <td class="text-right">{{ totalAdjudicado | number:'1.2-2' }} {{ getMonedaLabel(monedaOportunidad) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -234,7 +258,7 @@
                           </div>
                         }
                         <div class="text-muted small mt-2 border-top pt-2">
-                          Total: <strong>{{ getResultado(cot.id)?.total | number:'1.0-0' }}</strong> ·
+                          Total: <strong>{{ getResultado(cot.id)?.total_convertido | number:'1.2-2' }} {{ getMonedaLabel(monedaOportunidad) }}</strong> ·
                           Ítems: {{ getResultado(cot.id)?.items_disponibles }}/{{ getResultado(cot.id)?.items_totales }} ·
                           ★ {{ getResultado(cot.id)?.calificacion | number:'1.0-1' }}/10
                         </div>

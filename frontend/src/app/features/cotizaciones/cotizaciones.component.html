@@ -59,6 +59,9 @@
           <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
           <dxo-filter-row [visible]="true"></dxo-filter-row>
           <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+          <dxo-group-panel [visible]="true"></dxo-group-panel>
+          <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
           <dxo-toolbar>
             <dxi-item location="before" template="btnLimpiar"></dxi-item>
             <dxi-item name="searchPanel"></dxi-item>
@@ -84,10 +87,10 @@
           </div>
 
           <dxi-column
+            dataField="solicitud.titulo"
             caption="Oportunidad"
             [minWidth]="200"
             cellTemplate="solicitudTpl"
-            [allowFiltering]="false"
           ></dxi-column>
           <div *dxTemplate="let c of 'solicitudTpl'">
             <a [routerLink]="['/solicitudes', c.data.solicitud_id]" class="text-primary">
@@ -96,20 +99,20 @@
           </div>
 
           <dxi-column
+            dataField="proveedor.razon_social"
             caption="Proveedor"
             [width]="200"
             cellTemplate="proveedorTpl"
-            [allowFiltering]="false"
           ></dxi-column>
           <div *dxTemplate="let c of 'proveedorTpl'">
             {{ c.data.proveedor?.razon_social ?? '—' }}
           </div>
 
           <dxi-column
+            dataField="estado"
             caption="Estado"
             [width]="120"
             cellTemplate="estadoTpl"
-            [allowFiltering]="false"
           ></dxi-column>
           <div *dxTemplate="let c of 'estadoTpl'">
             <span class="badge" [ngClass]="getEstadoBadgeClass(c.data.estado)">
@@ -145,8 +148,9 @@
             caption="Acciones"
             [width]="180"
             cellTemplate="accionesTpl"
-            [allowFiltering]="false"
+            [allowGrouping]="false"
             [allowSorting]="false"
+            [allowFiltering]="false"
           ></dxi-column>
           <div *dxTemplate="let c of 'accionesTpl'">
             <a

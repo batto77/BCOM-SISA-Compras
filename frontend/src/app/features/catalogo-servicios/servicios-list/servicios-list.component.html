@@ -46,6 +46,9 @@
           <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
           <dxo-filter-row [visible]="true"></dxo-filter-row>
           <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+          <dxo-group-panel [visible]="true"></dxo-group-panel>
+          <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
           <dxo-toolbar>
             <dxi-item location="before" template="btnLimpiar"></dxi-item>
             <dxi-item name="searchPanel"></dxi-item>
@@ -57,25 +60,25 @@
           </div>
 
           <dxi-column dataField="nombre" caption="Nombre" [minWidth]="180"></dxi-column>
-          <dxi-column caption="Categoría" [width]="160" cellTemplate="catTpl"></dxi-column>
+          <dxi-column caption="Categoría" [width]="160" cellTemplate="catTpl" [calculateCellValue]="categoriaCellValue"></dxi-column>
           <div *dxTemplate="let c of 'catTpl'">{{ getCategoriaServNombre(c.data.categoria_servicio_id) }}</div>
-          <dxi-column caption="Tipo servicio" [width]="150" cellTemplate="tipoTpl"></dxi-column>
+          <dxi-column caption="Tipo servicio" [width]="150" cellTemplate="tipoTpl" [calculateCellValue]="tipoCellValue"></dxi-column>
           <div *dxTemplate="let c of 'tipoTpl'">{{ getTipoServNombre(c.data.tipo_servicio_id) }}</div>
-          <dxi-column caption="Unidad" [width]="120" cellTemplate="unidadTpl"></dxi-column>
+          <dxi-column caption="Unidad" [width]="120" cellTemplate="unidadTpl" [calculateCellValue]="unidadCellValue"></dxi-column>
           <div *dxTemplate="let c of 'unidadTpl'">{{ getUnidadNombre(c.data.unidad_medida_id) }}</div>
-          <dxi-column caption="Activo" [width]="80" cellTemplate="activoTpl"></dxi-column>
+          <dxi-column dataField="activo" caption="Activo" [width]="80" cellTemplate="activoTpl"></dxi-column>
           <div *dxTemplate="let c of 'activoTpl'">
             <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
               {{ c.data.activo ? 'Sí' : 'No' }}
             </span>
           </div>
-          <dxi-column caption="Etiquetas" cellTemplate="etiquetasTpl"></dxi-column>
+          <dxi-column caption="Etiquetas" cellTemplate="etiquetasTpl" [calculateCellValue]="etiquetasCellValue"></dxi-column>
           <div *dxTemplate="let c of 'etiquetasTpl'">
             @for (et of c.data.etiquetas; track et.id) {
               <span class="badge mr-1" [style.background]="et.color || '#6c757d'" style="color:#fff">{{ et.nombre }}</span>
             }
           </div>
-          <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesTpl"></dxi-column>
+          <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesTpl" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
           <div *dxTemplate="let c of 'accionesTpl'">
             <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
               <i class="fas fa-pencil-alt"></i>

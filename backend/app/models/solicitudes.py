@@ -106,6 +106,9 @@ class SolicitudCompra(Base):
     prioridad: Mapped[str] = mapped_column(
         String(20), default="normal", nullable=False
     )  # urgente/alta/normal/baja
+    moneda: Mapped[str] = mapped_column(
+        String(3), default="COP", nullable=False
+    )  # COP, USD, EUR, etc.
     estado: Mapped[str] = mapped_column(
         String(30), default="borrador", nullable=False
     )  # borrador/enviada/en_cotizacion/aprobada/rechazada

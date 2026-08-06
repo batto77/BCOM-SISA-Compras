@@ -46,9 +46,7 @@ export class SolicitudWizardComponent implements OnInit {
   guardando = false;
   cargando = true;
   error = '';
-  errorNumero = '';
 
-  numero = '';
   titulo = '';
   descripcion = '';
   solicitanteNombre = '';
@@ -56,9 +54,8 @@ export class SolicitudWizardComponent implements OnInit {
   rubroIds: number[] = [];
   fechaRequerida = new Date();
   prioridad: SolicitudCompraCreate['prioridad'] = 'normal';
+  moneda = 'COP';
   notas = '';
-
-  readonly numeroPattern = /^DAV-\d{7}$/;
 
   rubros: RubroPresupuestal[] = [];
   camposDinamicos: CampoSolicitud[] = [];
@@ -82,6 +79,11 @@ export class SolicitudWizardComponent implements OnInit {
     { id: 'alta', nombre: 'Alta' },
     { id: 'normal', nombre: 'Normal' },
     { id: 'baja', nombre: 'Baja' },
+  ];
+  monedaOptions = [
+    { id: 'COP', nombre: 'COP - Peso Colombiano' },
+    { id: 'USD', nombre: 'USD - Dólar Estadounidense' },
+    { id: 'EUR', nombre: 'EUR - Euro' },
   ];
 
   constructor(
@@ -121,15 +123,6 @@ export class SolicitudWizardComponent implements OnInit {
     window.setTimeout(() => this.tourService.startNewOpportunityTour(), 250);
   }
 
-  onNumeroChange(value: string): void {
-    this.numero = value;
-    if (value && !this.numeroPattern.test(value)) {
-      this.errorNumero = 'Formato incorrecto. Ejemplo: DAV-1234567';
-    } else {
-      this.errorNumero = '';
-    }
-  }
-
   guardarYAgregarItems(): void {
     if (this.guardando) return;
     if (!this.titulo.trim()) {
@@ -138,10 +131,6 @@ export class SolicitudWizardComponent implements OnInit {
     }
     if (!this.solicitanteNombre.trim()) {
       this.error = 'El nombre del solicitante es requerido.';
-      return;
-    }
-    if (this.numero && !this.numeroPattern.test(this.numero)) {
-      this.error = 'El número DAV tiene formato incorrecto. Ejemplo: DAV-1234567';
       return;
     }
     if (this.criteriosEval.length && !this.pesosValidos) {
@@ -161,7 +150,6 @@ export class SolicitudWizardComponent implements OnInit {
     }
 
     const payload: SolicitudCompraCreate = {
-      numero: this.numero.trim() || undefined,
       campos_extra: Object.keys(camposExtraFiltrados).length > 0 ? camposExtraFiltrados : undefined,
       titulo: this.titulo.trim(),
       descripcion: this.descripcion.trim() || undefined,
@@ -171,6 +159,7 @@ export class SolicitudWizardComponent implements OnInit {
       rubro_ids: this.rubroIds,
       fecha_requerida: this.fechaRequerida.toISOString().split('T')[0],
       prioridad: this.prioridad,
+      moneda: this.moneda,
       notas: this.notas.trim() || undefined,
       pesos_evaluacion: this.criteriosEval.length
         ? this.criteriosEval.reduce((acc, c) => {

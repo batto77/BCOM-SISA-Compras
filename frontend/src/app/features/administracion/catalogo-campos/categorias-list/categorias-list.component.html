@@ -52,6 +52,9 @@
               <dxo-search-panel [visible]="true" placeholder="Buscar categoría..."></dxo-search-panel>
               <dxo-filter-row [visible]="true"></dxo-filter-row>
               <dxo-header-filter [visible]="true"></dxo-header-filter>
+              <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+              <dxo-group-panel [visible]="true"></dxo-group-panel>
+              <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
               <dxo-paging [enabled]="false"></dxo-paging>
               <dxo-scrolling mode="standard" showScrollbar="onHover"></dxo-scrolling>
               <dxo-toolbar>
@@ -82,14 +85,21 @@
                 </span>
               </div>
               <dxi-column dataField="activo" caption="Activo" dataType="boolean" [width]="75"></dxi-column>
-              <dxi-column caption="" [width]="48" cellTemplate="accionesCategoriaTpl" [allowFiltering]="false" [allowSorting]="false"></dxi-column>
+              <dxi-column caption="" [width]="78" cellTemplate="accionesCategoriaTpl" [allowFiltering]="false" [allowSorting]="false" [allowGrouping]="false"></dxi-column>
               <div *dxTemplate="let c of 'accionesCategoriaTpl'">
                 <button
-                  class="btn btn-xs btn-outline-primary"
+                  class="btn btn-xs btn-outline-primary mr-1"
                   (click)="abrirEditarCategoria(c.data); $event.stopPropagation()"
                   title="Editar categoría"
                 >
                   <i class="fas fa-pencil-alt"></i>
+                </button>
+                <button
+                  class="btn btn-xs btn-outline-secondary"
+                  (click)="abrirClonarCategoria(c.data); $event.stopPropagation()"
+                  title="Clonar categoría (con sus campos)"
+                >
+                  <i class="fas fa-clone"></i>
                 </button>
               </div>
             </dx-data-grid>
@@ -124,6 +134,9 @@
                 <dxo-search-panel [visible]="true" placeholder="Buscar campo..."></dxo-search-panel>
                 <dxo-filter-row [visible]="true"></dxo-filter-row>
                 <dxo-header-filter [visible]="true"></dxo-header-filter>
+                <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+                <dxo-group-panel [visible]="true"></dxo-group-panel>
+                <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
                 <dxo-toolbar>
                   <dxi-item location="before" template="btnLimpiarCampos"></dxi-item>
                   <dxi-item name="searchPanel"></dxi-item>
@@ -137,38 +150,38 @@
                 <dxi-column dataField="orden" caption="Ord." [width]="60"></dxi-column>
                 <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
                 <dxi-column dataField="clave" caption="Clave" [width]="140"></dxi-column>
-                <dxi-column caption="Tipo" [width]="100" cellTemplate="tipoTpl"></dxi-column>
+                <dxi-column dataField="tipo_dato" caption="Tipo" [width]="100" cellTemplate="tipoTpl"></dxi-column>
                 <div *dxTemplate="let c of 'tipoTpl'">
                   <span class="badge" [ngClass]="getTipoBadgeClass(c.data.tipo_dato)">{{ c.data.tipo_dato }}</span>
                 </div>
-                <dxi-column caption="Cant." [width]="60" cellTemplate="cantTpl"></dxi-column>
+                <dxi-column dataField="tiene_cantidad" caption="Cant." [width]="60" cellTemplate="cantTpl"></dxi-column>
                 <div *dxTemplate="let c of 'cantTpl'">
                   <i class="fas" [class.fa-check-circle]="c.data.tiene_cantidad" [class.fa-minus-circle]="!c.data.tiene_cantidad"
                     [class.text-success]="c.data.tiene_cantidad" [class.text-secondary]="!c.data.tiene_cantidad"></i>
                 </div>
-                <dxi-column caption="Unidad" [width]="70" cellTemplate="unidTpl"></dxi-column>
+                <dxi-column dataField="tiene_unidad" caption="Unidad" [width]="70" cellTemplate="unidTpl"></dxi-column>
                 <div *dxTemplate="let c of 'unidTpl'">
                   <i class="fas" [class.fa-check-circle]="c.data.tiene_unidad" [class.fa-minus-circle]="!c.data.tiene_unidad"
                     [class.text-success]="c.data.tiene_unidad" [class.text-secondary]="!c.data.tiene_unidad"></i>
                 </div>
-                <dxi-column caption="Obligatorio" [width]="90" cellTemplate="obligTpl"></dxi-column>
+                <dxi-column dataField="es_obligatorio" caption="Obligatorio" [width]="90" cellTemplate="obligTpl"></dxi-column>
                 <div *dxTemplate="let c of 'obligTpl'">
                   <i class="fas" [class.fa-check-circle]="c.data.es_obligatorio" [class.fa-circle]="!c.data.es_obligatorio"
                     [class.text-danger]="c.data.es_obligatorio" [class.text-secondary]="!c.data.es_obligatorio"></i>
                 </div>
-                <dxi-column caption="Base" [width]="65" cellTemplate="baseTpl"></dxi-column>
+                <dxi-column dataField="es_campo_base" caption="Base" [width]="65" cellTemplate="baseTpl"></dxi-column>
                 <div *dxTemplate="let c of 'baseTpl'">
                   <span class="badge" [class.badge-dark]="c.data.es_campo_base" [class.badge-light]="!c.data.es_campo_base">
                     {{ c.data.es_campo_base ? 'Base' : 'Custom' }}
                   </span>
                 </div>
-                <dxi-column caption="Activo" [width]="70" cellTemplate="activoCTpl"></dxi-column>
+                <dxi-column dataField="activo" caption="Activo" [width]="70" cellTemplate="activoCTpl"></dxi-column>
                 <div *dxTemplate="let c of 'activoCTpl'">
                   <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
                     {{ c.data.activo ? 'Sí' : 'No' }}
                   </span>
                 </div>
-                <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesCTpl"></dxi-column>
+                <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesCTpl" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
                 <div *dxTemplate="let c of 'accionesCTpl'">
                   <button class="btn btn-xs btn-outline-primary mr-1" (click)="abrirEditarCampo(c.data)" title="Editar">
                     <i class="fas fa-pencil-alt"></i>
@@ -221,6 +234,43 @@
       <button class="btn btn-secondary mr-2" (click)="popupCategoriaVisible = false">Cancelar</button>
       <button class="btn btn-primary" (click)="guardarCategoria()" [disabled]="!categoriaActual.nombre?.trim()">
         <i class="fas fa-save mr-1"></i>Guardar
+      </button>
+    </div>
+  </div>
+</dx-popup>
+
+<!-- Popup clonar categoría -->
+<dx-popup
+  [(visible)]="popupClonarVisible"
+  title="Clonar categoría"
+  [width]="480"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  (onHidden)="popupClonarVisible = false"
+>
+  <div *dxTemplate="let d of 'content'">
+    @if (categoriaAClonar) {
+      <p class="text-muted">
+        Se creará una nueva categoría con el mismo tipo y los mismos campos definidos en
+        <strong>{{ categoriaAClonar.nombre }}</strong>.
+      </p>
+    }
+    @if (errorClonar) {
+      <div class="alert alert-danger py-2">{{ errorClonar }}</div>
+    }
+    <div class="form-group">
+      <label>Nombre de la nueva categoría <span class="text-danger">*</span></label>
+      <dx-text-box [value]="nombreClon" (valueChange)="nombreClon = $event" placeholder="Nombre de la categoría clonada..." [showClearButton]="true"></dx-text-box>
+    </div>
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-secondary mr-2" (click)="popupClonarVisible = false">Cancelar</button>
+      <button class="btn btn-primary" (click)="confirmarClonar()" [disabled]="!nombreClon.trim() || clonando">
+        @if (clonando) {
+          <span class="spinner-border spinner-border-sm mr-1"></span>
+        } @else {
+          <i class="fas fa-clone mr-1"></i>
+        }
+        Clonar
       </button>
     </div>
   </div>

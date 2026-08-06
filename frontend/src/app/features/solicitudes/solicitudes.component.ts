@@ -50,6 +50,10 @@ export class SolicitudesComponent implements OnInit {
     return solicitud.rubro?.nombre ?? '—';
   }
 
+  getItemsCount(solicitud: SolicitudCompraOut): number {
+    return solicitud.items?.length ?? 0;
+  }
+
   getEstadoBadgeClass(estado: string): string {
     const clases: Record<string, string> = {
       borrador: 'badge-secondary',

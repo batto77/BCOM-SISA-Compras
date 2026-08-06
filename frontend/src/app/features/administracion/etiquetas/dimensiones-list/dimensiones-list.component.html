@@ -50,6 +50,9 @@
           <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
           <dxo-filter-row [visible]="true"></dxo-filter-row>
           <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+          <dxo-group-panel [visible]="true"></dxo-group-panel>
+          <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
           <dxo-toolbar>
             <dxi-item location="before" template="btnLimpiar"></dxi-item>
             <dxi-item name="searchPanel"></dxi-item>
@@ -62,7 +65,7 @@
 
           <dxi-column dataField="nombre" caption="Nombre" [minWidth]="150"></dxi-column>
 
-          <dxi-column caption="Color" [width]="120" cellTemplate="colorTemplate"></dxi-column>
+          <dxi-column dataField="color" caption="Color" [width]="120" cellTemplate="colorTemplate"></dxi-column>
           <div *dxTemplate="let cell of 'colorTemplate'">
             @if (cell.data.color) {
               <span class="badge" [style.background]="cell.data.color" style="color:#fff; padding:4px 10px;">
@@ -75,7 +78,7 @@
 
           <dxi-column dataField="descripcion" caption="Descripción"></dxi-column>
 
-          <dxi-column caption="Activo" [width]="80" cellTemplate="activoTemplate"></dxi-column>
+          <dxi-column dataField="activo" caption="Activo" [width]="80" cellTemplate="activoTemplate"></dxi-column>
           <div *dxTemplate="let cell of 'activoTemplate'">
             @if (cell.data.activo) {
               <span class="badge badge-success">Sí</span>
@@ -84,7 +87,7 @@
             }
           </div>
 
-          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTemplate"></dxi-column>
+          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTemplate" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
           <div *dxTemplate="let cell of 'accionesTemplate'">
             <button class="btn btn-xs btn-outline-primary mr-1" (click)="abrirEditar(cell.data)" title="Editar">
               <i class="fas fa-pencil-alt"></i>

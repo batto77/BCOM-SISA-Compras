@@ -11,6 +11,12 @@ import {
   ProveedorFiltros
 } from '../models/proveedores.model';
 
+export interface ImportacionProveedoresResultado {
+  creados: number;
+  omitidos_duplicados: string[];
+  errores: Array<{ fila: number; motivo: string }>;
+}
+
 export interface ProveedorSugerido extends Proveedor {
   id: number;
   sugerido: boolean;
@@ -66,6 +72,22 @@ export class ProveedoresService extends ApiService {
 
   updateProveedor(id: number, data: Partial<Proveedor>): Observable<Proveedor | null> {
     return this.http.put<Proveedor>(`${this.baseUrl}/proveedores/${id}`, data).pipe(
+      catchError(() => of(null))
+    );
+  }
+
+  descargarPlantilla(): Observable<Blob | null> {
+    return this.http.get(`${this.baseUrl}/proveedores/plantilla`, { responseType: 'blob' }).pipe(
+      catchError(() => of(null))
+    );
+  }
+
+  importarProveedores(file: File): Observable<ImportacionProveedoresResultado | null> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    return this.http.post<ImportacionProveedoresResultado>(
+      `${this.baseUrl}/proveedores/importar`, formData
+    ).pipe(
       catchError(() => of(null))
     );
   }

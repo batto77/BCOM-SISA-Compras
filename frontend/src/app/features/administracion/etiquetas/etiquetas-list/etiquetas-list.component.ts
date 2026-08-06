@@ -128,4 +128,6 @@ export class EtiquetasListComponent implements OnInit {
     const dim = this.dimensiones.find(d => d.id === etiqueta.dimension_id);
     return dim?.nombre ?? 'Libre';
   }
+
+  dimensionCellValue = (etiqueta: Etiqueta): string => this.getNombreDimension(etiqueta);
 }

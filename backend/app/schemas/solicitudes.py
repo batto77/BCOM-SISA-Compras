@@ -71,7 +71,6 @@ class ItemSolicitudOut(ItemSolicitudCreate):
 # ─── SolicitudCompra ──────────────────────────────────────────────────────────
 
 class SolicitudCompraCreate(BaseModel):
-    numero: Optional[str] = Field(default=None, max_length=20)
     titulo: str
     descripcion: Optional[str] = None
     solicitante_nombre: str
@@ -80,6 +79,7 @@ class SolicitudCompraCreate(BaseModel):
     rubro_ids: List[int] = Field(default_factory=list, max_length=20)
     fecha_requerida: Optional[date] = None
     prioridad: str = "normal"
+    moneda: str = "COP"
     notas: Optional[str] = None
     campos_extra: Optional[dict] = None
     pesos_evaluacion: Optional[dict] = None
@@ -96,6 +96,7 @@ class SolicitudCompraUpdate(BaseModel):
     rubro_ids: Optional[List[int]] = Field(default=None, max_length=20)
     fecha_requerida: Optional[date] = None
     prioridad: Optional[str] = None
+    moneda: Optional[str] = None
     estado: Optional[str] = None
     notas: Optional[str] = None
     campos_extra: Optional[dict] = None
@@ -117,6 +118,7 @@ class SolicitudCompraOut(BaseModel):
     rubro_id: Optional[int] = None
     fecha_requerida: Optional[date] = None
     prioridad: str
+    moneda: str = "COP"
     estado: str
     version_actual: int = 1
     notas: Optional[str] = None

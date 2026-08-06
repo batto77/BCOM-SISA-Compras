@@ -57,6 +57,13 @@ export class CategoriasListComponent implements OnInit {
   modoEdicionCategoria = false;
   categoriaActual: Partial<CategoriaProducto> = {};
 
+  // Popup clonar categoría
+  popupClonarVisible = false;
+  categoriaAClonar: CategoriaProducto | null = null;
+  nombreClon = '';
+  clonando = false;
+  errorClonar = '';
+
   tiposDato = ['texto', 'numero', 'booleano'];
   tiposCategoria = [
     { id: 'hardware', nombre: 'Hardware' },
@@ -152,6 +159,44 @@ export class CategoriasListComponent implements OnInit {
         },
       });
     }
+  }
+
+  // --- Clonar categoría ---
+
+  abrirClonarCategoria(categoria: CategoriaProducto): void {
+    this.categoriaAClonar = categoria;
+    this.nombreClon = `${categoria.nombre} (copia)`;
+    this.errorClonar = '';
+    this.popupClonarVisible = true;
+  }
+
+  confirmarClonar(): void {
+    if (!this.categoriaAClonar || !this.nombreClon.trim()) return;
+    const nombre = this.nombreClon.trim();
+    const yaExiste = this.categorias.some(
+      c => c.nombre.trim().toLowerCase() === nombre.toLowerCase(),
+    );
+    if (yaExiste) {
+      this.errorClonar = 'Ya existe una categoría con ese nombre.';
+      return;
+    }
+
+    this.clonando = true;
+    this.errorClonar = '';
+    this.catalogosService.clonarCategoria(this.categoriaAClonar.id, nombre).subscribe({
+      next: nueva => {
+        this.clonando = false;
+        this.popupClonarVisible = false;
+        this.cargarCategorias();
+        this.seleccionarCategoria(nueva);
+      },
+      error: err => {
+        this.clonando = false;
+        this.errorClonar = err?.status === 409
+          ? (err?.error?.detail ?? 'Ya existe una categoría con ese nombre.')
+          : 'No se pudo clonar la categoría. Intentá nuevamente.';
+      },
+    });
   }
 
   // --- Campo ---

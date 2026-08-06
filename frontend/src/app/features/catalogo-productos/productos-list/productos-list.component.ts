@@ -39,4 +39,8 @@ export class ProductosListComponent implements OnInit {
   limpiarFiltros(): void {
     this.grid.instance.clearFilter();
   }
+
+  getEtiquetasTexto(producto: Producto): string {
+    return (producto.etiquetas || []).map(et => et.nombre).join(', ');
+  }
 }

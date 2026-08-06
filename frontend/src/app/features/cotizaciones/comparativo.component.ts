@@ -158,27 +158,39 @@ export class ComparativoComponent implements OnInit {
     return this.itemsSolicitud.length - this.itemsAdjudicados;
   }
 
-  // Resumen: qué proveedores participan y con cuántos ítems / subtotal
-  get resumenPorProveedor(): Array<{ cotizacionId: number; nombre: string; items: number; subtotal: number }> {
-    const map = new Map<number, { items: number; subtotal: number }>();
+  get monedaOportunidad(): string {
+    return this.evaluacion?.moneda_oportunidad ?? 'COP';
+  }
+
+  // Resumen: qué proveedores participan y con cuántos ítems / subtotal (en moneda convertida)
+  get resumenPorProveedor(): Array<{ cotizacionId: number; nombre: string; items: number; subtotal_original: number; subtotal_convertido: number; monedas: string[] }> {
+    const map = new Map<number, { items: number; subtotal_original: number; subtotal_convertido: number; monedas: Set<string> }>();
     for (const item of this.itemsSolicitud) {
       const cid = this.adjudicacion[item.id];
       if (cid == null) continue;
       const cand = this.getCandidato(item.id, cid);
-      const acc = map.get(cid) ?? { items: 0, subtotal: 0 };
+      const acc = map.get(cid) ?? { items: 0, subtotal_original: 0, subtotal_convertido: 0, monedas: new Set() };
       acc.items += 1;
-      acc.subtotal += cand?.subtotal ?? 0;
+      acc.subtotal_original += cand?.subtotal_original ?? 0;
+      acc.subtotal_convertido += cand?.subtotal_convertido ?? 0;
+      if (cand?.moneda_original) acc.monedas.add(cand.moneda_original);
       map.set(cid, acc);
     }
     return [...map.entries()].map(([cotizacionId, v]) => ({
       cotizacionId,
       nombre: this.getProveedorNombre(cotizacionId),
       items: v.items,
-      subtotal: v.subtotal,
+      subtotal_original: v.subtotal_original,
+      subtotal_convertido: v.subtotal_convertido,
+      monedas: [...v.monedas],
     }));
   }
   get totalAdjudicado(): number {
-    return this.resumenPorProveedor.reduce((a, r) => a + r.subtotal, 0);
+    return this.resumenPorProveedor.reduce((a, r) => a + r.subtotal_convertido, 0);
+  }
+
+  getMonedaLabel(moneda: string): string {
+    return moneda.toUpperCase();
   }
 
   getProveedorNombre(cotizacionId: number): string {

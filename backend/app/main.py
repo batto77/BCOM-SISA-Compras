@@ -124,6 +124,8 @@ async def lifespan(app: FastAPI):
             conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS justificacion_seleccion TEXT DEFAULT NULL"))
         if "adjudicacion_items" not in solicitud_cols:
             conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS adjudicacion_items JSONB DEFAULT NULL"))
+        if "moneda" not in solicitud_cols:
+            conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS moneda VARCHAR(3) DEFAULT 'COP'"))
         # Tabla paramétrica de criterios de evaluación
         if "criterios_evaluacion" not in inspector.get_table_names():
             conn.execute(text("""

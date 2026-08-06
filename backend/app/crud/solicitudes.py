@@ -11,6 +11,7 @@ from app.schemas.solicitudes import (
     SolicitudCompraCreate,
     SolicitudCompraUpdate,
 )
+from app.services.dav_generator import generar_proximo_dav
 
 
 class CRUDSolicitud(CRUDBase[SolicitudCompra, SolicitudCompraCreate, SolicitudCompraUpdate]):
@@ -39,7 +40,6 @@ class CRUDSolicitud(CRUDBase[SolicitudCompra, SolicitudCompraCreate, SolicitudCo
     def create_with_items(
         self, db: Session, *, obj_in: SolicitudCompraCreate
     ) -> SolicitudCompra:
-        from fastapi import HTTPException, status as http_status
         items_data = obj_in.items
         data = obj_in.model_dump(exclude={"items", "rubro_ids"})
         rubro_ids = list(dict.fromkeys(obj_in.rubro_ids))
@@ -48,15 +48,8 @@ class CRUDSolicitud(CRUDBase[SolicitudCompra, SolicitudCompraCreate, SolicitudCo
         if rubro_ids:
             data["rubro_id"] = rubro_ids[0]
 
-        if obj_in.numero:
-            exists = db.query(SolicitudCompra).filter(
-                SolicitudCompra.numero == obj_in.numero
-            ).first()
-            if exists:
-                raise HTTPException(
-                    status_code=http_status.HTTP_409_CONFLICT,
-                    detail=f"Ya existe una oportunidad con el número {obj_in.numero}",
-                )
+        # Generar automáticamente el número DAV (AAAA-NNNNN)
+        data["numero"] = generar_proximo_dav(db)
 
         db_obj = SolicitudCompra(**data)
         db_obj.rubros = self._get_rubros(db, rubro_ids)

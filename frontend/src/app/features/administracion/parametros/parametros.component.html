@@ -68,16 +68,19 @@
             <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
             <dxo-filter-row [visible]="true"></dxo-filter-row>
             <dxo-header-filter [visible]="true"></dxo-header-filter>
+            <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+            <dxo-group-panel [visible]="true"></dxo-group-panel>
+            <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
             <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
             <dxi-column dataField="simbolo" caption="Símbolo" [width]="100"></dxi-column>
             <dxi-column dataField="categoria" caption="Categoría"></dxi-column>
-            <dxi-column caption="Activo" [width]="80" cellTemplate="activoTpl"></dxi-column>
+            <dxi-column dataField="activo" caption="Activo" [width]="80" cellTemplate="activoTpl"></dxi-column>
             <div *dxTemplate="let c of 'activoTpl'">
               <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
                 {{ c.data.activo ? 'Sí' : 'No' }}
               </span>
             </div>
-            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesTpl"></dxi-column>
+            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesTpl" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
             <div *dxTemplate="let c of 'accionesTpl'">
               <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
                 <i class="fas fa-pencil-alt"></i>
@@ -93,19 +96,22 @@
             <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
             <dxo-filter-row [visible]="true"></dxo-filter-row>
             <dxo-header-filter [visible]="true"></dxo-header-filter>
+            <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+            <dxo-group-panel [visible]="true"></dxo-group-panel>
+            <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
             <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
             <dxi-column dataField="codigo" caption="Código" [width]="120"></dxi-column>
-            <dxi-column caption="Monto máx. auto-aprobación" [width]="220" cellTemplate="montoPTpl"></dxi-column>
+            <dxi-column dataField="monto_max_auto_aprobacion" caption="Monto máx. auto-aprobación" [width]="220" cellTemplate="montoPTpl"></dxi-column>
             <div *dxTemplate="let c of 'montoPTpl'">
               {{ formatoPesos(c.data.monto_max_auto_aprobacion) }}
             </div>
-            <dxi-column caption="Activo" [width]="80" cellTemplate="activoRTpl"></dxi-column>
+            <dxi-column dataField="activo" caption="Activo" [width]="80" cellTemplate="activoRTpl"></dxi-column>
             <div *dxTemplate="let c of 'activoRTpl'">
               <span class="badge" [class.badge-success]="c.data.activo" [class.badge-secondary]="!c.data.activo">
                 {{ c.data.activo ? 'Sí' : 'No' }}
               </span>
             </div>
-            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesRTpl"></dxi-column>
+            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesRTpl" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
             <div *dxTemplate="let c of 'accionesRTpl'">
               <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
                 <i class="fas fa-pencil-alt"></i>
@@ -121,10 +127,13 @@
             <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
             <dxo-filter-row [visible]="true"></dxo-filter-row>
             <dxo-header-filter [visible]="true"></dxo-header-filter>
+            <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+            <dxo-group-panel [visible]="true"></dxo-group-panel>
+            <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
             <dxi-column dataField="nombre" caption="Nombre"></dxi-column>
             <dxi-column dataField="horas" caption="Horas" [width]="100"></dxi-column>
             <dxi-column dataField="descripcion" caption="Descripción"></dxi-column>
-            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesATpl"></dxi-column>
+            <dxi-column caption="Acciones" [width]="80" cellTemplate="accionesATpl" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
             <div *dxTemplate="let c of 'accionesATpl'">
               <button class="btn btn-xs btn-outline-primary" (click)="abrirEditar(c.data)" title="Editar">
                 <i class="fas fa-pencil-alt"></i>

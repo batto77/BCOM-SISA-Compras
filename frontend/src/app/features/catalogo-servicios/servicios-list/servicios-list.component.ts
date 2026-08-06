@@ -131,4 +131,9 @@ export class ServiciosListComponent implements OnInit {
     const u = this.unidades.find(u => u.id === id);
     return u ? `${u.nombre} (${u.simbolo})` : '—';
   }
+
+  categoriaCellValue = (data: Servicio): string => this.getCategoriaServNombre(data.categoria_servicio_id);
+  tipoCellValue = (data: Servicio): string => this.getTipoServNombre(data.tipo_servicio_id);
+  unidadCellValue = (data: Servicio): string => this.getUnidadNombre(data.unidad_medida_id);
+  etiquetasCellValue = (data: Servicio): string => (data.etiquetas || []).map(et => et.nombre).join(', ');
 }

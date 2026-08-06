@@ -57,27 +57,9 @@
               }
 
               <div class="form-grid">
-                <div class="field">
-                  <label>
-                    Número DAV
-                    <span class="field-help" title="Identificador único que viene del sistema externo. Formato: DAV-XXXXXXX (7 dígitos). Ejemplo: DAV-1234567. Debe ser único en el sistema.">
-                      <i class="fas fa-question-circle"></i>
-                    </span>
-                  </label>
-                  <dx-text-box
-                    [value]="numero"
-                    (valueChange)="onNumeroChange($any($event))"
-                    placeholder="DAV-1234567"
-                    [maxLength]="20"
-                    [isValid]="!errorNumero"
-                  ></dx-text-box>
-                  @if (errorNumero) {
-                    <span class="field-error">{{ errorNumero }}</span>
-                  }
-                </div>
                 <div class="field" data-tour="opportunity-title">
                   <label>
-                    Título
+                    Oportunidad
                     <span class="field-help" title="Nombre corto y reconocible de la oportunidad. Ejemplo: Renovación de servidores sede Bogotá.">
                       <i class="fas fa-question-circle"></i>
                     </span>
@@ -124,6 +106,20 @@
                     displayExpr="nombre"
                     valueExpr="id"
                     [(value)]="prioridad"
+                  ></dx-select-box>
+                </div>
+                <div class="field">
+                  <label>
+                    Moneda
+                    <span class="field-help" title="Moneda en la cual se cotizarán y presupuestarán los productos o servicios.">
+                      <i class="fas fa-question-circle"></i>
+                    </span>
+                  </label>
+                  <dx-select-box
+                    [items]="monedaOptions"
+                    displayExpr="nombre"
+                    valueExpr="id"
+                    [(value)]="moneda"
                   ></dx-select-box>
                 </div>
                 <div class="field">
@@ -262,7 +258,7 @@
           <span class="side-kicker">Flujo</span>
           <h2>La oportunidad se guarda antes de cotizar</h2>
           <p>
-            Ingresá el número DAV que viene de tu sistema externo (formato DAV-XXXXXXX, 7 dígitos).
+            Se genera automáticamente un número DAV único (formato AAAA-NNNNN, donde AAAA es el año en curso).
             Luego podrás agregar productos, servicios, licencias y proveedores en el asistente de cotización.
           </p>
         </div>

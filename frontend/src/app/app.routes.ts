@@ -181,6 +181,12 @@ export const routes: Routes = [
               import('./features/catalogo-productos/producto-form/producto-form.component')
                 .then(m => m.ProductoFormComponent),
           },
+          {
+            path: ':id/clonar',
+            loadComponent: () =>
+              import('./features/catalogo-productos/producto-form/producto-form.component')
+                .then(m => m.ProductoFormComponent),
+          },
         ],
       },
 

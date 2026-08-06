@@ -49,6 +49,9 @@
           <dxo-search-panel [visible]="true" placeholder="Buscar..."></dxo-search-panel>
           <dxo-filter-row [visible]="true"></dxo-filter-row>
           <dxo-header-filter [visible]="true"></dxo-header-filter>
+          <dxo-grouping [contextMenuEnabled]="true"></dxo-grouping>
+          <dxo-group-panel [visible]="true"></dxo-group-panel>
+          <dxo-column-fixing [enabled]="true"></dxo-column-fixing>
           <dxo-toolbar>
             <dxi-item location="before" template="btnLimpiar"></dxi-item>
             <dxi-item name="searchPanel"></dxi-item>
@@ -59,19 +62,19 @@
             </button>
           </div>
 
-          <dxi-column caption="Etiqueta" [minWidth]="150" cellTemplate="etiquetaTemplate"></dxi-column>
+          <dxi-column dataField="nombre" caption="Etiqueta" [minWidth]="150" cellTemplate="etiquetaTemplate"></dxi-column>
           <div *dxTemplate="let cell of 'etiquetaTemplate'">
             <span class="badge" [style.background]="cell.data.color || '#6c757d'" style="color:#fff; padding:4px 10px;">
               {{ cell.data.nombre }}
             </span>
           </div>
 
-          <dxi-column caption="Categoría" [width]="160" cellTemplate="dimTemplate"></dxi-column>
+          <dxi-column caption="Categoría" [width]="160" cellTemplate="dimTemplate" [calculateCellValue]="dimensionCellValue"></dxi-column>
           <div *dxTemplate="let cell of 'dimTemplate'">
             <span class="text-muted">{{ getNombreDimension(cell.data) }}</span>
           </div>
 
-          <dxi-column caption="Activo" [width]="80" cellTemplate="activoTemplate"></dxi-column>
+          <dxi-column dataField="activo" caption="Activo" [width]="80" cellTemplate="activoTemplate"></dxi-column>
           <div *dxTemplate="let cell of 'activoTemplate'">
             @if (cell.data.activo) {
               <span class="badge badge-success">Sí</span>
@@ -80,7 +83,7 @@
             }
           </div>
 
-          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTemplate"></dxi-column>
+          <dxi-column caption="Acciones" [width]="100" cellTemplate="accionesTemplate" [allowGrouping]="false" [allowSorting]="false" [allowFiltering]="false"></dxi-column>
           <div *dxTemplate="let cell of 'accionesTemplate'">
             <button class="btn btn-xs btn-outline-primary mr-1" (click)="abrirEditar(cell.data)" title="Editar">
               <i class="fas fa-pencil-alt"></i>

@@ -51,6 +51,7 @@ export interface CotizacionOut {
   token?: string;
   solicitud_id: number;
   proveedor_id: number;
+  moneda?: string;
   estado: 'invitada' | 'respondida' | 'descartada';
   version_actual: number;
   respuesta_version?: number;
@@ -82,8 +83,10 @@ export interface CotizacionOut {
 export interface EvaluacionResultado {
   cotizacion_id: number;
   proveedor_id: number;
-  total: number;
-  dias_entrega: number | null;
+  moneda_cotizacion?: string;
+  monedas_utilizadas?: string[];
+  total_convertido?: number;
+  dias_entrega?: number | null;
   items_disponibles: number;
   items_totales: number;
   calificacion: number;
@@ -109,9 +112,12 @@ export interface EvaluacionCriterio {
 export interface EvaluacionItemCandidato {
   cotizacion_id: number;
   proveedor_id: number;
-  precio_unitario: number;
+  precio_unitario_original: number;
+  moneda_original: string;
+  precio_unitario_convertido: number;
   cantidad: number;
-  subtotal: number;
+  subtotal_original: number;
+  subtotal_convertido: number;
   tiempo_entrega_dias: number | null;
   subpuntajes: { financiero: number; tiempo_entrega: number; calificacion: number };
   puntaje: number;
@@ -129,6 +135,7 @@ export interface EvaluacionPorItem {
 
 export interface EvaluacionComparativo {
   pesos: Record<string, number>;
+  moneda_oportunidad?: string;
   criterios: EvaluacionCriterio[];
   por_item: EvaluacionPorItem[];
   adjudicacion_sugerida: Record<string, number | null>;
@@ -159,6 +166,7 @@ export interface ComparativoOut {
     solicitante_nombre: string;
     estado: string;
     prioridad: string;
+    moneda?: string;
     version_actual: number;
   };
   items_solicitud: Array<{

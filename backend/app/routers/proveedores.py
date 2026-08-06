@@ -1,6 +1,8 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.crud.proveedores import (
@@ -24,6 +26,11 @@ from app.schemas.proveedores import (
     TelefonoContactoCreate,
     TelefonoContactoOut,
     TelefonoContactoUpdate,
+)
+from app.services.proveedores_import import (
+    construir_proveedor_desde_fila,
+    generar_plantilla,
+    parsear_archivo,
 )
 
 router = APIRouter()
@@ -57,6 +64,64 @@ def crear_proveedor(obj_in: ProveedorCreate, db: Session = Depends(get_db)):
     result = crud_proveedor.create_with_etiquetas(db, obj_in=obj_in)
     _log(db, result.id, "create", f"Proveedor creado: {result.razon_social}")
     return result
+
+
+@router.get("/proveedores/plantilla")
+def descargar_plantilla_proveedores():
+    contenido = generar_plantilla()
+    return Response(
+        content=contenido,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=plantilla_proveedores.xlsx"},
+    )
+
+
+@router.post("/proveedores/importar")
+def importar_proveedores(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    if not file.filename or not file.filename.lower().endswith((".csv", ".xlsx")):
+        raise HTTPException(status_code=400, detail="El archivo debe ser .csv o .xlsx")
+
+    contenido = file.file.read()
+    try:
+        filas = parsear_archivo(contenido, file.filename)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    creados = 0
+    omitidos_duplicados: List[str] = []
+    errores: List[dict] = []
+
+    for idx, fila in enumerate(filas, start=2):  # fila 1 = encabezados
+        if not any((v or "").strip() if isinstance(v, str) else v for v in fila.values()):
+            continue
+        try:
+            proveedor_in = construir_proveedor_desde_fila(fila)
+        except (ValueError, ValidationError) as e:
+            errores.append({"fila": idx, "motivo": str(e)})
+            continue
+
+        if proveedor_in.nit and crud_proveedor.get_by_nit(db, nit=proveedor_in.nit):
+            omitidos_duplicados.append(proveedor_in.nit)
+            continue
+
+        try:
+            result = crud_proveedor.create_with_etiquetas(db, obj_in=proveedor_in)
+        except Exception as e:
+            db.rollback()
+            errores.append({"fila": idx, "motivo": f"Error al guardar: {e}"})
+            continue
+
+        creados += 1
+        _log(db, result.id, "create", f"Proveedor creado por importación: {result.razon_social}")
+
+    return {
+        "creados": creados,
+        "omitidos_duplicados": omitidos_duplicados,
+        "errores": errores,
+    }
 
 
 @router.get("/proveedores/{id}", response_model=ProveedorOut)
