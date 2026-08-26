@@ -42,6 +42,7 @@ import { PRIORIDADES, getPrioridadDescripcion } from '../../shared/utils/priorid
     FieldHelpDirective,
   ],
   templateUrl: './solicitud-wizard.component.html',
+  styleUrl: './solicitud-wizard.component.scss',
 })
 export class SolicitudWizardComponent implements OnInit {
   guardando = false;
