@@ -49,6 +49,7 @@ class ItemCotizacionCreate(BaseModel):
     item_solicitud_id: Optional[int] = None
     precio_unitario: Optional[Decimal] = None
     tiempo_entrega_dias: Optional[int] = None
+    garantia_meses: Optional[int] = None
     disponible: bool = True
     notas: Optional[str] = None
     valores_especificacion: Optional[dict] = None
@@ -59,6 +60,7 @@ class ItemCotizacionUpdate(BaseModel):
     item_solicitud_id: Optional[int] = None
     precio_unitario: Optional[Decimal] = None
     tiempo_entrega_dias: Optional[int] = None
+    garantia_meses: Optional[int] = None
     disponible: Optional[bool] = None
     notas: Optional[str] = None
     orden: Optional[int] = None
@@ -72,6 +74,7 @@ class ItemCotizacionOut(BaseModel):
     item_solicitud_id: Optional[int] = None
     precio_unitario: Optional[Decimal] = None
     tiempo_entrega_dias: Optional[int] = None
+    garantia_meses: Optional[int] = None
     disponible: bool
     notas: Optional[str] = None
     valores_especificacion: Optional[dict] = None
@@ -115,6 +118,9 @@ class CotizacionOut(BaseModel):
     items: List[ItemCotizacionOut] = []
     solicitud: Optional[SolicitudMiniOut] = None
     proveedor: Optional[ProveedorMiniOut] = None
+    # Derivado de la adjudicación de la oportunidad (la compra puede repartirse).
+    adjudicada: bool = False
+    items_adjudicados: int = 0
 
 
 class CotizacionListOut(BaseModel):

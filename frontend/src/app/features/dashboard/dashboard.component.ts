@@ -4,6 +4,11 @@ import { RouterLink } from '@angular/router';
 
 import { DashboardResumen } from '../../core/models/dashboard.model';
 import { DashboardService } from '../../core/services/dashboard.service';
+import {
+  getPrioridadBadgeClass,
+  getPrioridadAyuda,
+  getPrioridadNombre,
+} from '../../shared/utils/prioridades.util';
 
 interface DashboardCard {
   titulo: string;
@@ -90,8 +95,10 @@ export class DashboardComponent implements OnInit {
       borrador: 'badge-secondary',
       enviada: 'badge-info',
       en_cotizacion: 'badge-primary',
-      aprobada: 'badge-success',
+      adjudicada: 'badge-success',
+      aprobada: 'badge-success',   // histórico: reemplazado por 'adjudicada'
       rechazada: 'badge-danger',
+      cancelada: 'badge-dark',
     };
     return clases[estado] ?? 'badge-secondary';
   }
@@ -101,19 +108,24 @@ export class DashboardComponent implements OnInit {
       borrador: 'Borrador',
       enviada: 'Enviada',
       en_cotizacion: 'En cotización',
+      adjudicada: 'Adjudicada',
       aprobada: 'Aprobada',
       rechazada: 'Rechazada',
+      cancelada: 'Cancelada',
     };
     return etiquetas[estado] ?? estado;
   }
 
   getPrioridadBadgeClass(prioridad: string): string {
-    const clases: Record<string, string> = {
-      urgente: 'badge-danger',
-      alta: 'badge-warning',
-      normal: 'badge-primary',
-      baja: 'badge-secondary',
-    };
-    return clases[prioridad] ?? 'badge-secondary';
+    return getPrioridadBadgeClass(prioridad);
+  }
+
+  /** Texto de ayuda para el tooltip: "Crítico — Operación totalmente interrumpida". */
+  getPrioridadAyuda(prioridad: string): string {
+    return getPrioridadAyuda(prioridad);
+  }
+
+  getPrioridadNombre(prioridad: string): string {
+    return getPrioridadNombre(prioridad);
   }
 }

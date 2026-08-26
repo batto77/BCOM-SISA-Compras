@@ -23,3 +23,5 @@ services:
   frontend:
     ports:
       - "80:80"
+    volumes:
+      - /var/log/sisa-nginx:/var/log/nginx

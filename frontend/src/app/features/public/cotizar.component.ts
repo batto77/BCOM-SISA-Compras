@@ -23,11 +23,17 @@ import {
   EspecificacionVisible,
   parsearEspecificaciones,
 } from '../../shared/utils/especificaciones.util';
+import {
+  getPrioridadBadgeClass,
+  getPrioridadAyuda,
+  getPrioridadNombre,
+} from '../../shared/utils/prioridades.util';
 
 interface ItemForm {
   item_cotizacion_id: number;
   precio_unitario: number | null;
   tiempo_entrega_dias: number | null;
+  garantia_meses: number | null;
   disponible: boolean;
   notas: string;
   moneda: string;
@@ -54,6 +60,7 @@ export class CotizarComponent implements OnInit {
   cotizacion: CotizacionPublica | null = null;
   itemsForm: ItemForm[] = [];
   especificacionesPorItem: Record<number, EspecificacionVisible[]> = {};
+  notaAnalistaPorItem: Record<number, string> = {};
   itemsExpandidos = new Set<number>();
   notasProveedor = '';
 
@@ -101,6 +108,7 @@ export class CotizarComponent implements OnInit {
           item_cotizacion_id: item.id,
           precio_unitario: item.precio_unitario ?? null,
           tiempo_entrega_dias: item.tiempo_entrega_dias ?? null,
+          garantia_meses: item.garantia_meses ?? 0,
           disponible: item.disponible,
           notas: item.notas ?? '',
           moneda: item.moneda ?? (cot.proveedor_moneda_defecto ?? 'COP'),
@@ -125,12 +133,22 @@ export class CotizarComponent implements OnInit {
             parsearEspecificaciones(item.item_solicitud?.especificaciones, unidades),
           ]),
         );
+        this.notaAnalistaPorItem = Object.fromEntries(
+          cot.items.map(item => [item.id, (item.item_solicitud?.notas ?? '').trim()]),
+        );
         this.itemsExpandidos = new Set(
           cot.items
-            .filter(item => (this.especificacionesPorItem[item.id]?.length ?? 0) > 0)
+            .filter(item =>
+              (this.especificacionesPorItem[item.id]?.length ?? 0) > 0
+              || !!this.notaAnalistaPorItem[item.id],
+            )
             .map(item => item.id),
         );
         this.cargando = false;
+        // Si la oportunidad ya cerró, se muestra el aviso de resultado y no el formulario.
+        if (cot.cerrada) {
+          return;
+        }
         if (cot.estado === 'respondida' && cot.respuesta_version === cot.version_actual) {
           this.enviado = true;
           return;
@@ -202,8 +220,49 @@ export class CotizarComponent implements OnInit {
     this.itemsExpandidos.add(itemId);
   }
 
+  /** La oportunidad ya se cerró (adjudicada o cancelada): no se admiten cambios. */
+  get cerrada(): boolean {
+    return !!this.cotizacion?.cerrada;
+  }
+
+  get fueAdjudicado(): boolean {
+    return !!this.cotizacion?.fue_adjudicado;
+  }
+
+  get fueCancelada(): boolean {
+    return this.cotizacion?.solicitud_estado === 'cancelada';
+  }
+
+  /** Ítems que este proveedor cotizó y le fueron adjudicados: los que debe ejecutar. */
+  get itemsAdjudicados() {
+    const ids = this.cotizacion?.items_adjudicados_ids ?? [];
+    return (this.cotizacion?.items ?? []).filter(
+      item => item.item_solicitud_id != null && ids.includes(item.item_solicitud_id),
+    );
+  }
+
+  get totalAdjudicado(): number {
+    return this.itemsAdjudicados.reduce((sum, item) => {
+      const cant = Number(item.item_solicitud?.cantidad ?? 1);
+      return sum + (item.precio_unitario ?? 0) * cant;
+    }, 0);
+  }
+
   tieneEspecificaciones(itemId: number): boolean {
     return (this.especificacionesPorItem[itemId]?.length ?? 0) > 0;
+  }
+
+  tieneNotaAnalista(itemId: number): boolean {
+    return !!this.notaAnalistaPorItem[itemId];
+  }
+
+  /**
+   * Un ítem puede no tener especificaciones estructuradas (p. ej. una licencia)
+   * pero sí llevar nota del analista. En ese caso igual debe poder desplegarse,
+   * o el proveedor nunca vería la nota.
+   */
+  tieneDetalle(itemId: number): boolean {
+    return this.tieneEspecificaciones(itemId) || this.tieneNotaAnalista(itemId);
   }
 
   estaExpandido(itemId: number): boolean {
@@ -211,13 +270,16 @@ export class CotizarComponent implements OnInit {
   }
 
   getPrioridadBadge(prioridad: string): string {
-    const map: Record<string, string> = {
-      urgente: 'badge-danger',
-      alta: 'badge-warning',
-      normal: 'badge-primary',
-      baja: 'badge-secondary',
-    };
-    return map[prioridad] ?? 'badge-secondary';
+    return getPrioridadBadgeClass(prioridad);
+  }
+
+  /** Texto de ayuda para el tooltip: "Crítico — Operación totalmente interrumpida". */
+  getPrioridadAyuda(prioridad: string): string {
+    return getPrioridadAyuda(prioridad);
+  }
+
+  getPrioridadNombre(prioridad: string): string {
+    return getPrioridadNombre(prioridad);
   }
 
   onFichaSeleccionada(event: Event, itemId: number): void {
@@ -267,6 +329,7 @@ export class CotizarComponent implements OnInit {
       item_cotizacion_id: f.item_cotizacion_id,
       precio_unitario: f.precio_unitario,
       tiempo_entrega_dias: f.tiempo_entrega_dias,
+      garantia_meses: f.garantia_meses ?? 0,
       disponible: f.disponible,
       notas: f.notas || null,
       moneda: f.moneda || 'COP',

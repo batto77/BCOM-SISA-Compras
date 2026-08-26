@@ -89,12 +89,37 @@
 
           <dxi-column dataField="prioridad" caption="Prioridad" [width]="110" cellTemplate="prioridadTpl"></dxi-column>
           <div *dxTemplate="let c of 'prioridadTpl'">
-            <span class="badge" [ngClass]="getPrioridadBadgeClass(c.data.prioridad)">
-              {{ c.data.prioridad }}
+            <span
+              class="badge"
+              [ngClass]="getPrioridadBadgeClass(c.data.prioridad)"
+              [title]="getPrioridadAyuda(c.data.prioridad)"
+            >
+              {{ getPrioridadNombre(c.data.prioridad) }}
             </span>
           </div>
 
           <dxi-column dataField="estado" caption="Estado" [width]="120" cellTemplate="estadoTpl"></dxi-column>
+          <dxi-column
+            caption="Adjudicado a"
+            [minWidth]="200"
+            cellTemplate="adjudicadoTpl"
+            [calculateCellValue]="getAdjudicadoTexto"
+          ></dxi-column>
+          <div *dxTemplate="let c of 'adjudicadoTpl'">
+            @if (c.data.adjudicado_a?.length) {
+              @for (a of c.data.adjudicado_a; track a.cotizacion_id) {
+                <span
+                  class="badge badge-success mr-1"
+                  [title]="a.items + ' ítem(s) adjudicado(s) a ' + a.razon_social"
+                >
+                  {{ a.razon_social }}
+                  <span class="badge badge-light ml-1">{{ a.items }}</span>
+                </span>
+              }
+            } @else {
+              <span class="text-muted">—</span>
+            }
+          </div>
           <div *dxTemplate="let c of 'estadoTpl'">
             <span class="badge" [ngClass]="getEstadoBadgeClass(c.data.estado)">
               {{ c.data.estado | titlecase }}

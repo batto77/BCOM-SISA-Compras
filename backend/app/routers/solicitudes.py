@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.crud.solicitudes import crud_solicitud
 from app.database import get_db
 from app.schemas.solicitudes import (
+    AdjudicadoAOut,
     SolicitudCompraCreate,
     SolicitudCompraOut,
     SolicitudCompraUpdate,
@@ -13,6 +14,53 @@ from app.schemas.solicitudes import (
 )
 
 router = APIRouter()
+
+
+def _con_adjudicacion(db: Session, solicitudes: list) -> List[SolicitudCompraOut]:
+    """Resuelve los proveedores adjudicados de cada oportunidad.
+
+    La adjudicación se guarda como {item_id: cotizacion_id}; acá se traduce a
+    nombres de proveedor. Se hace en una sola consulta para toda la lista, en
+    lugar de una por oportunidad.
+    """
+    from app.models.cotizaciones import Cotizacion
+
+    salida = [SolicitudCompraOut.model_validate(s) for s in solicitudes]
+
+    cot_ids = {
+        cot_id
+        for s in solicitudes
+        for cot_id in (s.adjudicacion_items or {}).values()
+        if cot_id
+    }
+    if not cot_ids:
+        return salida
+
+    cotizaciones = db.query(Cotizacion).filter(Cotizacion.id.in_(cot_ids)).all()
+    por_id = {c.id: c for c in cotizaciones}
+
+    for original, out in zip(solicitudes, salida):
+        adjudicacion = original.adjudicacion_items or {}
+        if not adjudicacion:
+            continue
+        conteo: dict = {}
+        for cot_id in adjudicacion.values():
+            if cot_id:
+                conteo[cot_id] = conteo.get(cot_id, 0) + 1
+        out.adjudicado_a = [
+            AdjudicadoAOut(
+                cotizacion_id=cot_id,
+                proveedor_id=por_id[cot_id].proveedor_id,
+                razon_social=(
+                    por_id[cot_id].proveedor.razon_social
+                    if por_id[cot_id].proveedor else f"Prov. #{por_id[cot_id].proveedor_id}"
+                ),
+                items=cantidad,
+            )
+            for cot_id, cantidad in sorted(conteo.items(), key=lambda kv: -kv[1])
+            if cot_id in por_id
+        ]
+    return salida
 
 
 @router.get("/solicitudes", response_model=SolicitudListOut)
@@ -25,7 +73,9 @@ def listar_solicitudes(
     items, total = crud_solicitud.get_multi_filtered(
         db, skip=skip, limit=limit, estado=estado
     )
-    return SolicitudListOut(items=items, total=total, skip=skip, limit=limit)
+    return SolicitudListOut(
+        items=_con_adjudicacion(db, items), total=total, skip=skip, limit=limit
+    )
 
 
 def _log(db: Session, tabla: str, registro_id: int, accion: str, descripcion: str, datos: dict | None = None) -> None:
@@ -50,7 +100,7 @@ def obtener_solicitud(id: int, db: Session = Depends(get_db)):
     obj = crud_solicitud.get(db, id)
     if not obj:
         raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
-    return obj
+    return _con_adjudicacion(db, [obj])[0]
 
 
 @router.put("/solicitudes/{id}", response_model=SolicitudCompraOut)

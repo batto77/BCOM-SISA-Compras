@@ -16,6 +16,7 @@ export interface ItemCotizacionPublico {
   item_solicitud_id?: number;
   precio_unitario?: number;
   tiempo_entrega_dias?: number;
+  garantia_meses?: number;
   disponible: boolean;
   notas?: string;
   orden: number;
@@ -42,6 +43,14 @@ export interface CotizacionPublica {
   solicitud_numero?: string;
   solicitud_prioridad: string;
   solicitud_fecha_requerida?: string;
+  /** Estado de la oportunidad. Si está adjudicada o cancelada, no se admiten cambios. */
+  solicitud_estado: string;
+  solicitud_motivo_cancelacion?: string | null;
+  cerrada: boolean;
+  /** true si a este proveedor le adjudicaron al menos un ítem. */
+  fue_adjudicado: boolean;
+  /** IDs de items_solicitud adjudicados a este proveedor. */
+  items_adjudicados_ids: number[];
   proveedor_nombre: string;
   proveedor_monedas: string[];
   proveedor_moneda_defecto?: string;
@@ -53,6 +62,7 @@ export interface ItemRespuesta {
   item_cotizacion_id: number;
   precio_unitario?: number | null;
   tiempo_entrega_dias?: number | null;
+  garantia_meses?: number | null;
   disponible: boolean;
   notas?: string | null;
   moneda?: string | null;

@@ -48,8 +48,125 @@
       </div>
     }
 
+    <!-- Estado: oportunidad cerrada (adjudicada o cancelada) -->
+    @if (!cargando && cotizacion && cerrada) {
+
+      @if (fueCancelada) {
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <i class="fas fa-ban text-secondary" style="font-size:56px;"></i>
+            <h3 class="mt-3">Esta oportunidad fue cancelada</h3>
+            <p class="text-muted">
+              La oportunidad <strong>{{ cotizacion.solicitud_titulo }}</strong> fue cancelada
+              por el equipo de compras de SISA y ya no admite cambios.
+            </p>
+            @if (cotizacion.solicitud_motivo_cancelacion) {
+              <p class="text-muted"><strong>Motivo:</strong> {{ cotizacion.solicitud_motivo_cancelacion }}</p>
+            }
+            <p class="text-muted small mb-0">
+              Gracias por su participación, <strong>{{ cotizacion.proveedor_nombre }}</strong>.
+            </p>
+          </div>
+        </div>
+      } @else if (fueAdjudicado) {
+        <!-- Este proveedor ganó: se le muestran los ítems a ejecutar -->
+        <div class="card">
+          <div class="card-body text-center py-4">
+            <i class="fas fa-trophy text-success" style="font-size:56px;"></i>
+            <h3 class="mt-3">¡Su cotización fue adjudicada!</h3>
+            <p class="text-muted mb-0">
+              Felicitaciones, <strong>{{ cotizacion.proveedor_nombre }}</strong>.<br>
+              SISA le adjudicó los siguientes ítems de
+              <strong>{{ cotizacion.solicitud_titulo }}</strong>. Puede proceder con su ejecución.
+            </p>
+          </div>
+        </div>
+
+        <div class="card mt-3">
+          <div class="card-header d-flex align-items-center">
+            <h5 class="mb-0 flex-grow-1">
+              <i class="fas fa-clipboard-check mr-2"></i>Ítems adjudicados
+            </h5>
+            <span class="badge badge-success">{{ itemsAdjudicados.length }} ítem(s)</span>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead style="background:#f8f9fa;">
+                  <tr>
+                    <th style="width:40px;">#</th>
+                    <th>Ítem</th>
+                    <th class="text-right" style="width:90px;">Cantidad</th>
+                    <th class="text-right" style="width:140px;">Precio unitario</th>
+                    <th class="text-right" style="width:110px;">Días entrega</th>
+                    <th class="text-right" style="width:110px;">Garantía</th>
+                    <th class="text-right" style="width:150px;">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of itemsAdjudicados; track item.id; let i = $index) {
+                    <tr>
+                      <td class="text-muted">{{ i + 1 }}</td>
+                      <td>
+                        <strong>{{ item.item_solicitud?.descripcion ?? '—' }}</strong>
+                        @if (item.item_solicitud?.notas) {
+                          <div class="small text-muted">
+                            <i class="fas fa-sticky-note"></i> {{ item.item_solicitud?.notas }}
+                          </div>
+                        }
+                      </td>
+                      <td class="text-right">{{ item.item_solicitud?.cantidad ?? '—' }}</td>
+                      <td class="text-right">
+                        {{ item.precio_unitario | number:'1.2-2' }}
+                        <span class="small text-muted">{{ item.moneda ?? 'COP' }}</span>
+                      </td>
+                      <td class="text-right">{{ item.tiempo_entrega_dias ?? '—' }}</td>
+                      <td class="text-right">
+                        {{ item.garantia_meses ? (item.garantia_meses + ' meses') : '—' }}
+                      </td>
+                      <td class="text-right font-weight-bold">
+                        {{ (item.precio_unitario ?? 0) * $any(item.item_solicitud?.cantidad ?? 1) | number:'1.2-2' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr style="background:#f8f9fa;">
+                    <td colspan="6" class="text-right font-weight-bold">Total adjudicado</td>
+                    <td class="text-right font-weight-bold">{{ totalAdjudicado | number:'1.2-2' }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-info mt-3 mb-0">
+          <i class="fas fa-info-circle mr-2"></i>
+          Esta cotización ya no admite modificaciones. Ante cualquier duda, contacte al equipo de compras de SISA.
+        </div>
+      } @else {
+        <!-- Adjudicada a otro proveedor -->
+        <div class="card">
+          <div class="card-body text-center py-5">
+            <i class="fas fa-flag-checkered text-secondary" style="font-size:56px;"></i>
+            <h3 class="mt-3">Esta oportunidad ya fue adjudicada</h3>
+            <p class="text-muted">
+              La oportunidad <strong>{{ cotizacion.solicitud_titulo }}</strong> ya fue adjudicada
+              y no admite más cambios.<br>
+              En esta ocasión no resultó seleccionada su propuesta.
+            </p>
+            <p class="text-muted small mb-0">
+              Agradecemos su participación, <strong>{{ cotizacion.proveedor_nombre }}</strong>.
+              Lo tendremos en cuenta para próximas oportunidades.
+            </p>
+          </div>
+        </div>
+      }
+    }
+
     <!-- Formulario principal -->
-    @if (!cargando && cotizacion && !enviado) {
+    @if (!cargando && cotizacion && !enviado && !cerrada) {
 
       <!-- Info de la solicitud -->
       <div class="card mb-3" data-tour="supplier-quote-summary">
@@ -73,8 +190,12 @@
             </div>
             <div class="col-md-4">
               <small class="text-muted d-block">Prioridad</small>
-              <span class="badge" [ngClass]="getPrioridadBadge(cotizacion.solicitud_prioridad)">
-                {{ cotizacion.solicitud_prioridad }}
+              <span
+                class="badge"
+                [ngClass]="getPrioridadBadge(cotizacion.solicitud_prioridad)"
+                [title]="getPrioridadAyuda(cotizacion.solicitud_prioridad)"
+              >
+                {{ getPrioridadNombre(cotizacion.solicitud_prioridad) }}
               </span>
             </div>
           </div>
@@ -138,6 +259,9 @@
                   <th class="text-right" style="width:110px;" data-tour="supplier-quote-delivery">
                     Días entrega
                   </th>
+                  <th class="text-right" style="width:120px;" title="Meses de garantía. Si no aplica, dejar en 0.">
+                    Garantía (meses)
+                  </th>
                   <th class="text-right" style="width:130px;">Subtotal {{ monedaDefecto }}</th>
                   <th style="min-width:180px;" data-tour="supplier-quote-item-notes">Observación</th>
                   <th style="width:120px;">Ficha técnica</th>
@@ -153,7 +277,7 @@
                     <td class="text-muted">{{ i + 1 }}</td>
                     <td>
                       <strong>{{ item.item_solicitud?.descripcion ?? '—' }}</strong>
-                      @if (tieneEspecificaciones(item.id)) {
+                      @if (tieneDetalle(item.id)) {
                         <button
                           type="button"
                           class="specs-toggle specs-toggle-inline"
@@ -163,7 +287,9 @@
                           (click)="alternarEspecificaciones(item.id)"
                         >
                           <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                          <span class="specs-toggle-label">Especificaciones</span>
+                          <span class="specs-toggle-label">
+                            {{ tieneEspecificaciones(item.id) ? 'Especificaciones' : 'Nota del analista' }}
+                          </span>
                         </button>
                       }
                     </td>
@@ -220,6 +346,20 @@
                       ></dx-number-box>
                     </td>
 
+                    <!-- Garantía en meses (0 = no aplica) -->
+                    <td class="text-right" style="min-width:120px;">
+                      <dx-number-box
+                        [value]="$any(itemsForm[i].garantia_meses)"
+                        (valueChange)="itemsForm[i].garantia_meses = $event"
+                        [min]="0"
+                        [showSpinButtons]="true"
+                        [width]="'100%'"
+                        [disabled]="!itemsForm[i].disponible"
+                        placeholder="0"
+                        hint="Meses de garantía. Si no aplica, dejar en 0."
+                      ></dx-number-box>
+                    </td>
+
                     <!-- Subtotal en moneda defecto del proveedor -->
                     <td class="text-right font-weight-bold" style="white-space:nowrap;">
                       {{ getSubtotalEnDefecto(i) | number:'1.2-2' }}
@@ -264,17 +404,20 @@
 
                   </tr>
 
-                  @if (tieneEspecificaciones(item.id) && estaExpandido(item.id)) {
+                  @if (tieneDetalle(item.id) && estaExpandido(item.id)) {
                     <tr class="specs-detail-row" [id]="'specs-' + item.id">
-                      <td colspan="10">
+                      <td colspan="11">
                         <div class="specs-detail">
                           <div class="specs-detail-heading">
                             <i class="fas fa-clipboard-list" aria-hidden="true"></i>
                             <div>
-                              <strong>Especificaciones solicitadas</strong>
+                              <strong>
+                                {{ tieneEspecificaciones(item.id) ? 'Especificaciones solicitadas' : 'Detalle del ítem' }}
+                              </strong>
                               <span>{{ item.item_solicitud?.descripcion }}</span>
                             </div>
                           </div>
+                          @if (tieneEspecificaciones(item.id)) {
                           <dl class="specs-grid">
                             @for (spec of especificacionesPorItem[item.id]; track $index) {
                               <div class="spec-field">
@@ -300,6 +443,7 @@
                               </div>
                             }
                           </dl>
+                          }
                           @if (item.item_solicitud?.notas) {
                             <p class="specs-analyst-note">
                               <strong>Nota del analista:</strong> {{ item.item_solicitud?.notas }}
@@ -312,13 +456,13 @@
                 }
                 @empty {
                   <tr>
-                    <td colspan="10" class="text-center text-muted py-4">Sin ítems en esta cotización.</td>
+                    <td colspan="11" class="text-center text-muted py-4">Sin ítems en esta cotización.</td>
                   </tr>
                 }
               </tbody>
               <tfoot>
                 <tr style="background:#f8f9fa;font-weight:bold;">
-                  <td [attr.colspan]="isMultiMoneda() ? 8 : 7" class="text-right">
+                  <td [attr.colspan]="isMultiMoneda() ? 9 : 8" class="text-right">
                     TOTAL ESTIMADO ({{ monedaDefecto }}):
                   </td>
                   <td class="text-right" style="font-size:15px;white-space:nowrap;">

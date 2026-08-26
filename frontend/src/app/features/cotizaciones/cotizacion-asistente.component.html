@@ -492,6 +492,11 @@
                       <div>
                         <strong>{{ item.descripcion }}</strong>
                         <small>{{ item.cantidad }} {{ item._unidadNombre || '' }} · {{ getEspecificacionesResumen(item) }}</small>
+                        @if (item.notas) {
+                          <small class="item-nota" title="Esta nota la ve el proveedor al responder la cotización">
+                            <i class="fas fa-sticky-note"></i> Nota: {{ item.notas }}
+                          </small>
+                        }
                       </div>
                       <div class="item-actions">
                         <button type="button" class="icon-action edit" (click)="editarItem(item)" title="Editar ítem">

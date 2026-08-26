@@ -78,7 +78,7 @@ class SolicitudCompraCreate(BaseModel):
     rubro_id: Optional[int] = None
     rubro_ids: List[int] = Field(default_factory=list, max_length=20)
     fecha_requerida: Optional[date] = None
-    prioridad: str = "normal"
+    prioridad: str = "medio"
     moneda: str = "COP"
     notas: Optional[str] = None
     campos_extra: Optional[dict] = None
@@ -104,6 +104,14 @@ class SolicitudCompraUpdate(BaseModel):
     items: Optional[List[ItemSolicitudCreate]] = None
 
 
+class AdjudicadoAOut(BaseModel):
+    """Proveedor al que se le adjudicaron ítems de la oportunidad."""
+    cotizacion_id: int
+    proveedor_id: int
+    razon_social: str
+    items: int
+
+
 class SolicitudCompraOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -122,6 +130,13 @@ class SolicitudCompraOut(BaseModel):
     estado: str
     version_actual: int = 1
     notas: Optional[str] = None
+    motivo_cancelacion: Optional[str] = None
+    fecha_cancelacion: Optional[datetime] = None
+    fecha_adjudicacion: Optional[datetime] = None
+    cotizacion_ganadora_id: Optional[int] = None
+    adjudicacion_items: Optional[dict] = None
+    # Proveedores adjudicados, resueltos en el router (no es una columna).
+    adjudicado_a: List[AdjudicadoAOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: Optional[datetime] = None
     items: List[ItemSolicitudOut] = []

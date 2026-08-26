@@ -40,6 +40,7 @@ class ItemCotizacionPublicoOut(BaseModel):
     item_solicitud_id: Optional[int] = None
     precio_unitario: Optional[Decimal] = None
     tiempo_entrega_dias: Optional[int] = None
+    garantia_meses: Optional[int] = None
     disponible: bool
     notas: Optional[str] = None
     orden: int
@@ -75,6 +76,14 @@ class CotizacionPublicaOut(BaseModel):
     solicitud_numero: Optional[str] = None
     solicitud_prioridad: str = ""
     solicitud_fecha_requerida: Optional[object] = None
+    # Estado de la oportunidad: si está adjudicada o cancelada el proveedor ya no
+    # puede modificar nada y debe ver el aviso correspondiente.
+    solicitud_estado: str = ""
+    solicitud_motivo_cancelacion: Optional[str] = None
+    cerrada: bool = False
+    # Adjudicación: si a este proveedor le adjudicaron ítems, se listan para que ejecute.
+    fue_adjudicado: bool = False
+    items_adjudicados_ids: List[int] = []
     # Info del proveedor
     proveedor_nombre: str = ""
     proveedor_monedas: List[str] = []
@@ -89,6 +98,7 @@ class ItemRespuestaProveedor(BaseModel):
     item_cotizacion_id: int
     precio_unitario: Optional[Decimal] = None
     tiempo_entrega_dias: Optional[int] = None
+    garantia_meses: Optional[int] = None  # 0 = no aplica
     disponible: bool = True
     notas: Optional[str] = None
     moneda: Optional[str] = None
@@ -106,11 +116,27 @@ class UploadOut(BaseModel):
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
+ESTADOS_CERRADOS = ("adjudicada", "cancelada")
+
+
+def _items_adjudicados_a(cot, sol) -> List[int]:
+    """IDs de items_solicitud que le fueron adjudicados a ESTA cotización."""
+    if not sol or not sol.adjudicacion_items:
+        return []
+    return [
+        int(item_id)
+        for item_id, cot_id in sol.adjudicacion_items.items()
+        if cot_id == cot.id
+    ]
+
+
 def _build_out(cot, db: Session) -> CotizacionPublicaOut:
     sol = cot.solicitud
     prov = cot.proveedor
     pdf_url = f"/uploads/{cot.pdf_cotizacion_path}" if cot.pdf_cotizacion_path else None
     tasas = db.query(TasaCambio).order_by(TasaCambio.moneda).all()
+    estado_sol = sol.estado if sol else ""
+    adjudicados = _items_adjudicados_a(cot, sol) if estado_sol == "adjudicada" else []
     return CotizacionPublicaOut(
         id=cot.id,
         token=cot.token,
@@ -124,6 +150,11 @@ def _build_out(cot, db: Session) -> CotizacionPublicaOut:
         solicitud_numero=sol.numero if sol else None,
         solicitud_prioridad=sol.prioridad if sol else "",
         solicitud_fecha_requerida=sol.fecha_requerida if sol else None,
+        solicitud_estado=estado_sol,
+        solicitud_motivo_cancelacion=(sol.motivo_cancelacion if sol else None),
+        cerrada=estado_sol in ESTADOS_CERRADOS,
+        fue_adjudicado=bool(adjudicados),
+        items_adjudicados_ids=adjudicados,
         proveedor_nombre=prov.razon_social if prov else "",
         proveedor_monedas=list(prov.monedas or []) if prov else [],
         proveedor_moneda_defecto=prov.moneda_defecto if prov else None,
@@ -141,6 +172,25 @@ def _validate_token(token: str, db: Session):
     return cot
 
 
+def _bloquear_si_cerrada(cot) -> None:
+    """Impide cualquier modificación si la oportunidad ya fue adjudicada o cancelada.
+
+    La UI oculta los controles, pero el link es público: el candado real va acá.
+    """
+    sol = cot.solicitud
+    estado = sol.estado if sol else ""
+    if estado == "adjudicada":
+        raise HTTPException(
+            status_code=409,
+            detail="Esta oportunidad ya fue adjudicada. No se admiten más cambios.",
+        )
+    if estado == "cancelada":
+        raise HTTPException(
+            status_code=409,
+            detail="Esta oportunidad fue cancelada. No se admiten más cambios.",
+        )
+
+
 # ─── Endpoints ───────────────────────────────────────────────────────────────
 
 @router.get("/cotizar/{token}", response_model=CotizacionPublicaOut)
@@ -156,6 +206,7 @@ def responder_cotizacion(
     db: Session = Depends(get_db),
 ):
     cot = _validate_token(token, db)
+    _bloquear_si_cerrada(cot)
     items_map = {item.id: item for item in cot.items}
 
     for resp in data.items:
@@ -163,6 +214,7 @@ def responder_cotizacion(
         if item:
             item.precio_unitario = resp.precio_unitario
             item.tiempo_entrega_dias = resp.tiempo_entrega_dias
+            item.garantia_meses = resp.garantia_meses or 0
             item.disponible = resp.disponible
             item.notas = resp.notas
             if resp.moneda:
@@ -191,6 +243,7 @@ async def subir_ficha_tecnica(
 ):
     """El proveedor sube la ficha técnica PDF de un ítem específico."""
     cot = _validate_token(token, db)
+    _bloquear_si_cerrada(cot)
 
     item = next((i for i in cot.items if i.id == item_cotizacion_id), None)
     if not item:
@@ -221,6 +274,7 @@ async def subir_pdf_cotizacion(
 ):
     """El proveedor sube un PDF general de su cotización."""
     cot = _validate_token(token, db)
+    _bloquear_si_cerrada(cot)
 
     ext = (file.filename or "").lower().split(".")[-1]
     if ext != "pdf" and file.content_type != "application/pdf":

@@ -4,6 +4,11 @@ import { RouterLink } from '@angular/router';
 import { DxDataGridModule, DxDataGridComponent, DxButtonModule } from 'devextreme-angular';
 import { SolicitudesService } from '../../core/services/solicitudes.service';
 import { SolicitudCompraOut } from '../../core/models/solicitudes.model';
+import {
+  getPrioridadBadgeClass,
+  getPrioridadAyuda,
+  getPrioridadNombre,
+} from '../../shared/utils/prioridades.util';
 
 @Component({
   selector: 'app-solicitudes',
@@ -50,6 +55,11 @@ export class SolicitudesComponent implements OnInit {
     return solicitud.rubro?.nombre ?? '—';
   }
 
+  /** Texto plano de los proveedores adjudicados: permite filtrar, ordenar y agrupar. */
+  getAdjudicadoTexto(solicitud: SolicitudCompraOut): string {
+    return (solicitud.adjudicado_a ?? []).map(a => a.razon_social).join(', ');
+  }
+
   getItemsCount(solicitud: SolicitudCompraOut): number {
     return solicitud.items?.length ?? 0;
   }
@@ -59,19 +69,24 @@ export class SolicitudesComponent implements OnInit {
       borrador: 'badge-secondary',
       enviada: 'badge-info',
       en_cotizacion: 'badge-warning',
-      aprobada: 'badge-success',
+      adjudicada: 'badge-success',
+      aprobada: 'badge-success',   // histórico: reemplazado por 'adjudicada'
       rechazada: 'badge-danger',
+      cancelada: 'badge-dark',
     };
     return clases[estado] ?? 'badge-secondary';
   }
 
   getPrioridadBadgeClass(prioridad: string): string {
-    const clases: Record<string, string> = {
-      urgente: 'badge-danger',
-      alta: 'badge-warning',
-      normal: 'badge-primary',
-      baja: 'badge-secondary',
-    };
-    return clases[prioridad] ?? 'badge-secondary';
+    return getPrioridadBadgeClass(prioridad);
+  }
+
+  /** Texto de ayuda para el tooltip: "Crítico — Operación totalmente interrumpida". */
+  getPrioridadAyuda(prioridad: string): string {
+    return getPrioridadAyuda(prioridad);
+  }
+
+  getPrioridadNombre(prioridad: string): string {
+    return getPrioridadNombre(prioridad);
   }
 }

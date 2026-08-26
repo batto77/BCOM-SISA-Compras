@@ -22,6 +22,7 @@ import { EvaluacionService, CriterioEvaluacion } from '../../core/services/evalu
 import { RubroPresupuestal } from '../../core/models/parametros.model';
 import { SolicitudCompraCreate } from '../../core/models/solicitudes.model';
 import { FieldHelpDirective } from '../../shared/directives/field-help.directive';
+import { PRIORIDADES, getPrioridadDescripcion } from '../../shared/utils/prioridades.util';
 
 @Component({
   selector: 'app-solicitud-wizard',
@@ -53,7 +54,7 @@ export class SolicitudWizardComponent implements OnInit {
   aprobador = '';
   rubroIds: number[] = [];
   fechaRequerida = new Date();
-  prioridad: SolicitudCompraCreate['prioridad'] = 'normal';
+  prioridad: SolicitudCompraCreate['prioridad'] = 'medio';
   moneda = 'COP';
   notas = '';
 
@@ -74,12 +75,12 @@ export class SolicitudWizardComponent implements OnInit {
   restablecerPesos(): void {
     for (const c of this.criteriosEval) this.pesosEval[c.clave] = Number(c.peso_default);
   }
-  prioridadOptions = [
-    { id: 'urgente', nombre: 'Urgente' },
-    { id: 'alta', nombre: 'Alta' },
-    { id: 'normal', nombre: 'Normal' },
-    { id: 'baja', nombre: 'Baja' },
-  ];
+  prioridadOptions = PRIORIDADES;
+
+  /** Descripción de la prioridad elegida, como ayuda debajo del selector. */
+  get prioridadDescripcion(): string {
+    return getPrioridadDescripcion(this.prioridad);
+  }
   monedaOptions = [
     { id: 'COP', nombre: 'COP - Peso Colombiano' },
     { id: 'USD', nombre: 'USD - Dólar Estadounidense' },

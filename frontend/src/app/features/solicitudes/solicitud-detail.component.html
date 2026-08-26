@@ -34,6 +34,25 @@
 
     @if (!cargando && solicitud) {
 
+      <!-- Aviso de oportunidad cancelada -->
+      @if (estaCancelada) {
+        <div class="alert alert-dark d-flex align-items-start">
+          <i class="fas fa-ban mr-2 mt-1"></i>
+          <div class="flex-grow-1">
+            <strong>Oportunidad cancelada</strong>
+            @if (solicitud.fecha_cancelacion) {
+              <span class="ml-1">el {{ solicitud.fecha_cancelacion | date:'dd/MM/yyyy HH:mm' }}</span>
+            }
+            @if (solicitud.motivo_cancelacion) {
+              <div class="mt-1">Motivo: {{ solicitud.motivo_cancelacion }}</div>
+            }
+          </div>
+          <button class="btn btn-sm btn-outline-light" [disabled]="cancelando" (click)="reabrir()">
+            <i class="fas fa-undo mr-1"></i>Reabrir
+          </button>
+        </div>
+      }
+
       <!-- Timeline de estado -->
       <div class="card card-outline card-primary mb-3">
         <div class="card-body p-3">
@@ -42,18 +61,21 @@
               { num: 1, label: 'Borrador', icon: 'fa-file-alt' },
               { num: 2, label: 'Enviada', icon: 'fa-paper-plane' },
               { num: 3, label: 'En Cotización', icon: 'fa-tags' },
-              { num: 4, label: 'Aprobada / Rechazada', icon: 'fa-check-circle' }
+              { num: 4, label: 'Adjudicada', icon: 'fa-check-circle' }
             ]; track paso.num) {
               <div class="text-center" style="flex: 1; min-width: 100px;">
                 <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-1"
                      style="width:40px;height:40px;"
-                     [class.bg-primary]="pasoActual >= paso.num"
+                     [class.bg-primary]="pasoActual >= paso.num && !estaCancelada"
+                     [class.bg-dark]="pasoActual >= paso.num && estaCancelada"
                      [class.bg-light]="pasoActual < paso.num"
                      [class.text-white]="pasoActual >= paso.num"
                      [class.text-muted]="pasoActual < paso.num">
-                  <i class="fas {{ paso.icon }}"></i>
+                  <i class="fas {{ estaCancelada && paso.num === 4 ? 'fa-ban' : paso.icon }}"></i>
                 </div>
-                <div class="small" [class.font-weight-bold]="pasoActual === paso.num">{{ paso.label }}</div>
+                <div class="small" [class.font-weight-bold]="pasoActual === paso.num">
+                  {{ estaCancelada && paso.num === 4 ? 'Cancelada' : paso.label }}
+                </div>
               </div>
               @if (paso.num < 4) {
                 <div class="flex-grow-0" style="height:2px;width:30px;background:#dee2e6;margin-bottom:20px;"></div>
@@ -73,11 +95,22 @@
           >
             <i class="fas fa-edit mr-1"></i>Editar RFQ
           </a>
-          <span class="badge mr-2" [ngClass]="getPrioridadBadgeClass(solicitud.prioridad)">
-            Prioridad: {{ solicitud.prioridad }}
+          @if (puedeCancelar) {
+            <button class="btn btn-sm btn-outline-danger mr-2" (click)="abrirCancelar()">
+              <i class="fas fa-ban mr-1"></i>Cancelar oportunidad
+            </button>
+          }
+          <span
+            class="badge mr-2"
+            [ngClass]="getPrioridadBadgeClass(solicitud.prioridad)"
+            [title]="getPrioridadAyuda(solicitud.prioridad)"
+          >
+            Prioridad: {{ getPrioridadNombre(solicitud.prioridad) }}
           </span>
           <span class="badge badge-primary mr-2">RFQ v{{ solicitud.version_actual || 1 }}</span>
-          <span class="badge badge-info">{{ solicitud.estado | titlecase }}</span>
+          <span class="badge" [ngClass]="getEstadoBadgeClass(solicitud.estado)">
+            {{ solicitud.estado | titlecase }}
+          </span>
         </div>
         <div class="card-body">
           <div class="row">
@@ -145,7 +178,7 @@
                     </td>
                     <td>
                       <strong>{{ item.descripcion }}</strong>
-                      @if (tieneEspecificaciones(item.id)) {
+                      @if (tieneDetalle(item.id)) {
                         <button
                           type="button"
                           class="specs-toggle specs-toggle-inline"
@@ -155,7 +188,9 @@
                           (click)="alternarEspecificaciones(item.id)"
                         >
                           <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                          <span class="specs-toggle-label">Especificaciones</span>
+                          <span class="specs-toggle-label">
+                            {{ tieneEspecificaciones(item.id) ? 'Especificaciones' : 'Nota del analista' }}
+                          </span>
                         </button>
                       }
                     </td>
@@ -167,17 +202,20 @@
                           : '—' }}
                     </td>
                   </tr>
-                  @if (tieneEspecificaciones(item.id) && estaExpandido(item.id)) {
+                  @if (tieneDetalle(item.id) && estaExpandido(item.id)) {
                     <tr class="specs-detail-row" [id]="'opportunity-specs-' + item.id">
                       <td colspan="6">
                         <div class="specs-detail">
                           <div class="specs-detail-heading">
                             <i class="fas fa-clipboard-list" aria-hidden="true"></i>
                             <div>
-                              <strong>Especificaciones solicitadas</strong>
+                              <strong>
+                                {{ tieneEspecificaciones(item.id) ? 'Especificaciones solicitadas' : 'Detalle del ítem' }}
+                              </strong>
                               <span>{{ item.descripcion }}</span>
                             </div>
                           </div>
+                          @if (tieneEspecificaciones(item.id)) {
                           <dl class="specs-grid">
                             @for (spec of especificacionesPorItem[item.id]; track $index) {
                               <div class="spec-field">
@@ -201,6 +239,7 @@
                               </div>
                             }
                           </dl>
+                          }
                           @if (item.notas) {
                             <p class="specs-analyst-note">
                               <strong>Nota del analista:</strong> {{ item.notas }}
@@ -247,6 +286,7 @@
                     <th>Proveedor</th>
                     <th>País</th>
                     <th>Estado</th>
+                    <th>Adjudicación</th>
                     <th>Versión</th>
                     <th>Fecha límite</th>
                     <th>Acciones</th>
@@ -261,6 +301,19 @@
                         <span class="badge" [ngClass]="getCotizacionEstadoBadge(cot.estado)">
                           {{ cot.estado }}
                         </span>
+                      </td>
+                      <td>
+                        @if (cot.adjudicada) {
+                          <span
+                            class="badge badge-success"
+                            [title]="'Se le adjudicaron ' + cot.items_adjudicados + ' ítem(s) de esta oportunidad'"
+                          >
+                            <i class="fas fa-trophy mr-1"></i>Adjudicado
+                            <span class="badge badge-light ml-1">{{ cot.items_adjudicados }}</span>
+                          </span>
+                        } @else {
+                          <span class="text-muted">—</span>
+                        }
                       </td>
                       <td><span class="badge badge-light border">v{{ cot.version_actual || 1 }}</span></td>
                       <td>{{ cot.fecha_limite_respuesta ?? '—' }}</td>
@@ -345,6 +398,55 @@
         [disabled]="proveedoresSeleccionados.length === 0 || enviando"
         (onClick)="enviarRFQ()"
       ></dx-button>
+    </div>
+  </div>
+</dx-popup>
+
+<!-- Popup cancelar oportunidad -->
+<dx-popup
+  [(visible)]="popupCancelarVisible"
+  title="Cancelar oportunidad"
+  [width]="520"
+  [height]="'auto'"
+  [showCloseButton]="true"
+  (onHidden)="popupCancelarVisible = false"
+>
+  <div *dxTemplate="let d of 'content'">
+    <p class="text-muted">
+      La oportunidad quedará en estado <strong>Cancelada</strong>. Indicá el motivo:
+      queda registrado en la auditoría y visible en el detalle.
+    </p>
+
+    @if (errorCancelar) {
+      <div class="alert alert-danger py-2">
+        <i class="fas fa-exclamation-triangle mr-1"></i>{{ errorCancelar }}
+      </div>
+    }
+
+    <div class="form-group">
+      <label>Motivo de la cancelación <span class="text-danger">*</span></label>
+      <dx-text-area
+        [value]="motivoCancelacion"
+        (valueChange)="motivoCancelacion = $event"
+        [height]="110"
+        placeholder="Ej: el área solicitante desistió de la compra, se reasignó presupuesto, etc."
+      ></dx-text-area>
+    </div>
+
+    <div class="d-flex justify-content-end mt-3">
+      <button class="btn btn-secondary mr-2" (click)="popupCancelarVisible = false">Volver</button>
+      <button
+        class="btn btn-danger"
+        [disabled]="!motivoCancelacion.trim() || cancelando"
+        (click)="confirmarCancelar()"
+      >
+        @if (cancelando) {
+          <span class="spinner-border spinner-border-sm mr-1"></span>
+        } @else {
+          <i class="fas fa-ban mr-1"></i>
+        }
+        Cancelar oportunidad
+      </button>
     </div>
   </div>
 </dx-popup>

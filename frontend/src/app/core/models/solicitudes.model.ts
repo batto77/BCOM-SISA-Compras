@@ -27,7 +27,7 @@ export interface SolicitudCompraCreate {
   rubro_id?: number;
   rubro_ids?: number[];
   fecha_requerida?: string; // YYYY-MM-DD
-  prioridad: 'urgente' | 'alta' | 'normal' | 'baja';
+  prioridad: 'critico' | 'alto' | 'medio' | 'bajo';
   moneda?: string;
   notas?: string;
   /** Pesos de los criterios de evaluación para esta oportunidad (suman 100) */
@@ -42,6 +42,14 @@ export interface ItemSolicitudOut extends ItemSolicitudForm {
   categoria_producto?: { id: number; nombre: string; tipo: string };
   servicio?: { id: number; nombre: string };
   unidad?: { id: number; nombre: string; simbolo: string };
+}
+
+export interface AdjudicadoA {
+  cotizacion_id: number;
+  proveedor_id: number;
+  razon_social: string;
+  /** Cantidad de ítems adjudicados a este proveedor. */
+  items: number;
 }
 
 export interface SolicitudCompraOut {
@@ -60,6 +68,13 @@ export interface SolicitudCompraOut {
   estado: string;
   version_actual: number;
   notas?: string;
+  motivo_cancelacion?: string;
+  fecha_cancelacion?: string;
+  fecha_adjudicacion?: string;
+  cotizacion_ganadora_id?: number | null;
+  adjudicacion_items?: Record<string, number> | null;
+  /** Proveedores a los que se les adjudicaron ítems (la compra puede repartirse). */
+  adjudicado_a: AdjudicadoA[];
   created_at: string;
   updated_at?: string;
   items: ItemSolicitudOut[];

@@ -53,6 +53,32 @@ def listar_categorias_producto(
     return CategoriaProductoListOut(items=items, total=total, skip=skip, limit=limit)
 
 
+def _validar_nombre_categoria_libre(
+    db: Session, nombre: str, exclude_id: Optional[int] = None
+) -> None:
+    """Rechaza nombres duplicados distinguiendo el caso de categorías desactivadas.
+
+    Una categoría inactiva no aparece en el listado, así que un mensaje genérico
+    de "ya existe" dejaría al usuario buscando algo que no puede ver.
+    """
+    existente = crud_categoria_producto.get_by_nombre(
+        db, nombre=nombre, exclude_id=exclude_id
+    )
+    if not existente:
+        return
+    if existente.activo:
+        raise HTTPException(
+            status_code=409, detail="Ya existe una categoría con ese nombre."
+        )
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            f"Ya existe una categoría con ese nombre (#{existente.id}), "
+            "pero está desactivada. Reactivala o elegí otro nombre."
+        ),
+    )
+
+
 @router.post(
     "/categorias-producto",
     response_model=CategoriaProductoOut,
@@ -61,10 +87,7 @@ def listar_categorias_producto(
 def crear_categoria_producto(
     obj_in: CategoriaProductoCreate, db: Session = Depends(get_db)
 ):
-    if crud_categoria_producto.get_by_nombre(db, nombre=obj_in.nombre):
-        raise HTTPException(
-            status_code=409, detail="Ya existe una categoría con ese nombre."
-        )
+    _validar_nombre_categoria_libre(db, obj_in.nombre)
     return crud_categoria_producto.create(db, obj_in=obj_in)
 
 
@@ -83,12 +106,8 @@ def actualizar_categoria_producto(
     obj = crud_categoria_producto.get(db, id)
     if not obj:
         raise HTTPException(status_code=404, detail="Categoría de producto no encontrada")
-    if obj_in.nombre and crud_categoria_producto.get_by_nombre(
-        db, nombre=obj_in.nombre, exclude_id=id
-    ):
-        raise HTTPException(
-            status_code=409, detail="Ya existe una categoría con ese nombre."
-        )
+    if obj_in.nombre:
+        _validar_nombre_categoria_libre(db, obj_in.nombre, exclude_id=id)
     return crud_categoria_producto.update(db, db_obj=obj, obj_in=obj_in)
 
 
@@ -103,10 +122,7 @@ def clonar_categoria_producto(
     origen = crud_categoria_producto.get(db, id)
     if not origen:
         raise HTTPException(status_code=404, detail="Categoría de producto no encontrada")
-    if crud_categoria_producto.get_by_nombre(db, nombre=obj_in.nombre):
-        raise HTTPException(
-            status_code=409, detail="Ya existe una categoría con ese nombre."
-        )
+    _validar_nombre_categoria_libre(db, obj_in.nombre)
     return crud_categoria_producto.clonar(db, origen=origen, nombre_nuevo=obj_in.nombre)
 
 

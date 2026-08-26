@@ -78,6 +78,10 @@ export interface CotizacionOut {
     pais: string;
     calificacion?: number;
   };
+  /** true si a esta cotización se le adjudicó al menos un ítem. */
+  adjudicada: boolean;
+  /** Cantidad de ítems adjudicados a esta cotización. */
+  items_adjudicados: number;
 }
 
 export interface EvaluacionResultado {
@@ -119,7 +123,13 @@ export interface EvaluacionItemCandidato {
   subtotal_original: number;
   subtotal_convertido: number;
   tiempo_entrega_dias: number | null;
-  subpuntajes: { financiero: number; tiempo_entrega: number; calificacion: number };
+  garantia_meses: number | null;
+  subpuntajes: {
+    financiero: number;
+    tiempo_entrega: number;
+    garantia: number;
+    calificacion: number;
+  };
   puntaje: number;
   es_mejor: boolean;
 }
@@ -168,6 +178,9 @@ export interface ComparativoOut {
     prioridad: string;
     moneda?: string;
     version_actual: number;
+    motivo_cancelacion?: string | null;
+    fecha_cancelacion?: string | null;
+    fecha_adjudicacion?: string | null;
   };
   items_solicitud: Array<{
     id: number;

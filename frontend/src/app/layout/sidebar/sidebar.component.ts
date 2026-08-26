@@ -48,7 +48,6 @@ export class SidebarComponent {
       children: [
         { label: 'Lista de proveedores', icon: 'far fa-circle', route: '/proveedores' },
         { label: 'Nuevo proveedor', icon: 'far fa-circle', route: '/proveedores/nuevo' },
-        { label: 'Evaluaciones', icon: 'far fa-circle', route: '/proveedores/evaluaciones' },
       ],
     },
     {

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -308,12 +309,31 @@ def adjudicar_items(id: int, data: AdjudicacionRequest, db: Session = Depends(ge
     cots_elegidas = set(limpia.values())
     solicitud.cotizacion_ganadora_id = next(iter(cots_elegidas)) if len(cots_elegidas) == 1 else None
 
-    _log(db, "solicitudes_compra", id, "update", f"Adjudicación por ítem actualizada ({len(limpia)} ítems)")
+    # Estado de la oportunidad según el avance de la adjudicación.
+    # Una oportunidad cancelada no se reabre por guardar el comparativo.
+    completa = bool(items_validos) and len(limpia) == len(items_validos)
+    if solicitud.estado != "cancelada":
+        if completa:
+            solicitud.estado = "adjudicada"
+            solicitud.fecha_adjudicacion = datetime.utcnow()
+        else:
+            solicitud.estado = "en_cotizacion"
+            solicitud.fecha_adjudicacion = None
+
+    _log(
+        db, "solicitudes_compra", id, "update",
+        f"Adjudicación por ítem actualizada ({len(limpia)} de {len(items_validos)} ítems)"
+        + (" — oportunidad adjudicada" if completa else ""),
+    )
     db.commit()
     return {
         "adjudicacion_items": solicitud.adjudicacion_items,
         "cotizacion_ganadora_id": solicitud.cotizacion_ganadora_id,
         "justificacion_seleccion": solicitud.justificacion_seleccion,
+        "estado": solicitud.estado,
+        "items_adjudicados": len(limpia),
+        "items_totales": len(items_validos),
+        "adjudicacion_completa": completa,
     }
 
 
@@ -356,3 +376,60 @@ def seleccionar_ganador(id: int, data: SeleccionGanadorRequest, db: Session = De
         "cotizacion_ganadora_id": solicitud.cotizacion_ganadora_id,
         "justificacion_seleccion": solicitud.justificacion_seleccion,
     }
+
+
+class CancelarOportunidadRequest(BaseModel):
+    motivo: str
+
+
+@router.post(
+    "/solicitudes/{id}/cancelar",
+    summary="Cancela una oportunidad. El motivo es obligatorio y queda registrado.",
+)
+def cancelar_oportunidad(id: int, data: CancelarOportunidadRequest, db: Session = Depends(get_db)):
+    from app.models.solicitudes import SolicitudCompra
+
+    motivo = (data.motivo or "").strip()
+    if not motivo:
+        raise HTTPException(
+            status_code=400, detail="Debe indicar el motivo de la cancelación."
+        )
+
+    solicitud = db.query(SolicitudCompra).filter(SolicitudCompra.id == id).first()
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+    if solicitud.estado == "cancelada":
+        raise HTTPException(status_code=400, detail="La oportunidad ya está cancelada.")
+
+    solicitud.estado = "cancelada"
+    solicitud.motivo_cancelacion = motivo
+    solicitud.fecha_cancelacion = datetime.utcnow()
+    _log(db, "solicitudes_compra", id, "update", f"Oportunidad cancelada: {motivo}")
+    db.commit()
+    db.refresh(solicitud)
+    return {
+        "estado": solicitud.estado,
+        "motivo_cancelacion": solicitud.motivo_cancelacion,
+        "fecha_cancelacion": solicitud.fecha_cancelacion,
+    }
+
+
+@router.post(
+    "/solicitudes/{id}/reabrir",
+    summary="Reabre una oportunidad cancelada y la devuelve a cotización.",
+)
+def reabrir_oportunidad(id: int, db: Session = Depends(get_db)):
+    from app.models.solicitudes import SolicitudCompra
+
+    solicitud = db.query(SolicitudCompra).filter(SolicitudCompra.id == id).first()
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Oportunidad no encontrada")
+    if solicitud.estado != "cancelada":
+        raise HTTPException(status_code=400, detail="Solo se puede reabrir una oportunidad cancelada.")
+
+    solicitud.estado = "en_cotizacion"
+    solicitud.motivo_cancelacion = None
+    solicitud.fecha_cancelacion = None
+    _log(db, "solicitudes_compra", id, "update", "Oportunidad reabierta")
+    db.commit()
+    return {"estado": solicitud.estado}

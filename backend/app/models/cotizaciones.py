@@ -25,6 +25,8 @@ class ItemCotizacion(Base):
         Numeric(15, 2), nullable=True
     )
     tiempo_entrega_dias: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # Meses de garantía ofrecidos. 0 = no aplica (a más meses, mejor puntaje).
+    garantia_meses: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=0)
     disponible: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     notas: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     valores_especificacion: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
@@ -85,6 +87,23 @@ class Cotizacion(Base):
         cascade="all, delete-orphan",
         order_by="CotizacionVersion.numero_version",
     )
+
+    # ── Adjudicación ────────────────────────────────────────────────────────
+    # La adjudicación se guarda en la solicitud (puede repartirse entre varios
+    # proveedores), así que desde la cotización se deriva. `solicitud` es
+    # lazy="joined", por lo que esto no dispara consultas extra.
+
+    @property
+    def items_adjudicados(self) -> int:
+        """Cantidad de ítems de la oportunidad adjudicados a esta cotización."""
+        sol = self.solicitud
+        if not sol or not sol.adjudicacion_items:
+            return 0
+        return sum(1 for cot_id in sol.adjudicacion_items.values() if cot_id == self.id)
+
+    @property
+    def adjudicada(self) -> bool:
+        return self.items_adjudicados > 0
 
 
 class CotizacionVersion(Base):

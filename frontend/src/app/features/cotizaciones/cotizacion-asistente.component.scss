@@ -268,6 +268,16 @@ textarea:focus {
   margin-top: 3px;
 }
 
+/* Nota del analista: la ve el proveedor al responder, así que se destaca. */
+.item-row small.item-nota {
+  color: #8a5a00;
+  background: #fff8e6;
+  border-left: 3px solid #f0b429;
+  border-radius: 3px;
+  padding: 3px 8px;
+  margin-top: 5px;
+}
+
 .type-pill {
   background: #eaf4ff;
   color: #0f4f9e;

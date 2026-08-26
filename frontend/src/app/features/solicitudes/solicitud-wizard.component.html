@@ -97,7 +97,10 @@
                 <div class="field">
                   <label>
                     Prioridad
-                    <span class="field-help" title="Nivel de urgencia con el que compras debe gestionar la oportunidad.">
+                    <span
+                      class="field-help"
+                      title="Prioridad segun el impacto en la operacion:&#10;Critico — Operacion totalmente interrumpida&#10;Alto — Operacion con afectacion significativa&#10;Medio — Operacion sin impacto actual, pero con riesgo de escalamiento&#10;Bajo — Operacion sin impacto y sin riesgo relevante"
+                    >
                       <i class="fas fa-question-circle"></i>
                     </span>
                   </label>
@@ -106,7 +109,16 @@
                     displayExpr="nombre"
                     valueExpr="id"
                     [(value)]="prioridad"
-                  ></dx-select-box>
+                    itemTemplate="prioridadItem"
+                  >
+                    <div *dxTemplate="let p of 'prioridadItem'">
+                      <div><strong>{{ p.nombre }}</strong></div>
+                      <div class="prioridad-desc">{{ p.descripcion }}</div>
+                    </div>
+                  </dx-select-box>
+                  @if (prioridadDescripcion) {
+                    <small class="prioridad-hint">{{ prioridadDescripcion }}</small>
+                  }
                 </div>
                 <div class="field">
                   <label>

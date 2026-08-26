@@ -126,6 +126,27 @@ async def lifespan(app: FastAPI):
             conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS adjudicacion_items JSONB DEFAULT NULL"))
         if "moneda" not in solicitud_cols:
             conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS moneda VARCHAR(3) DEFAULT 'COP'"))
+        # Cancelación y adjudicación de la oportunidad
+        if "motivo_cancelacion" not in solicitud_cols:
+            conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS motivo_cancelacion TEXT DEFAULT NULL"))
+        if "fecha_cancelacion" not in solicitud_cols:
+            conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS fecha_cancelacion TIMESTAMP DEFAULT NULL"))
+        if "fecha_adjudicacion" not in solicitud_cols:
+            conn.execute(text("ALTER TABLE solicitudes_compra ADD COLUMN IF NOT EXISTS fecha_adjudicacion TIMESTAMP DEFAULT NULL"))
+        # Prioridades por impacto en la operación: urgente/alta/normal/baja → critico/alto/medio/bajo
+        conn.execute(text("""
+            UPDATE solicitudes_compra SET prioridad = CASE prioridad
+                WHEN 'urgente' THEN 'critico'
+                WHEN 'alta'    THEN 'alto'
+                WHEN 'normal'  THEN 'medio'
+                WHEN 'baja'    THEN 'bajo'
+                ELSE prioridad
+            END
+            WHERE prioridad IN ('urgente', 'alta', 'normal', 'baja')
+        """))
+        # Garantía ofrecida por el proveedor, en meses (0 = no aplica)
+        if "garantia_meses" not in items_cotizacion_columns:
+            conn.execute(text("ALTER TABLE items_cotizacion ADD COLUMN IF NOT EXISTS garantia_meses INTEGER DEFAULT 0"))
         # Tabla paramétrica de criterios de evaluación
         if "criterios_evaluacion" not in inspector.get_table_names():
             conn.execute(text("""
@@ -177,6 +198,9 @@ async def lifespan(app: FastAPI):
             ("tiempo_entrega", "Tiempo de entrega", "Días de entrega propuestos por el proveedor", 30, 2),
             ("completitud", "Completitud", "Ítems disponibles frente a los requeridos", 20, 3),
             ("calificacion", "Calificación del proveedor", "Ranking histórico del proveedor (0-10 estrellas)", 10, 4),
+            # Entra en 0 para no alterar los pesos ya configurados (deben sumar 100).
+            # El área de compras le asigna su peso desde Comparativo → Pesos de evaluación.
+            ("garantia", "Garantía", "Meses de garantía ofrecidos por el proveedor (a más meses, mejor)", 0, 5),
         ]
         for clave, nombre, desc, peso, orden in criterios_base:
             if not db_seed.query(CriterioEvaluacion).filter(CriterioEvaluacion.clave == clave).first():

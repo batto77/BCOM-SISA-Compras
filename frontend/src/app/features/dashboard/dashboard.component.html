@@ -79,8 +79,12 @@
                         </span>
                       </td>
                       <td>
-                        <span class="badge" [ngClass]="getPrioridadBadgeClass(oportunidad.prioridad)">
-                          {{ oportunidad.prioridad }}
+                        <span
+                          class="badge"
+                          [ngClass]="getPrioridadBadgeClass(oportunidad.prioridad)"
+                          [title]="getPrioridadAyuda(oportunidad.prioridad)"
+                        >
+                          {{ getPrioridadNombre(oportunidad.prioridad) }}
                         </span>
                       </td>
                       <td>

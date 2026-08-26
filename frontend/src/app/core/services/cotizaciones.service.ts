@@ -12,6 +12,22 @@ import {
   EnviarRFQRequest,
 } from '../models/cotizaciones.model';
 
+export interface AdjudicacionResultado {
+  adjudicacion_items: Record<string, number>;
+  cotizacion_ganadora_id: number | null;
+  justificacion_seleccion: string | null;
+  estado: string;
+  items_adjudicados: number;
+  items_totales: number;
+  adjudicacion_completa: boolean;
+}
+
+export interface CancelacionResultado {
+  estado: string;
+  motivo_cancelacion: string;
+  fecha_cancelacion: string | null;
+}
+
 export interface CotizacionFiltros {
   solicitud_id?: number;
   estado?: string;
@@ -102,10 +118,24 @@ export class CotizacionesService extends ApiService {
     solicitudId: number,
     adjudicacion: Record<number, number | null>,
     justificacion?: string,
-  ): Observable<{ adjudicacion_items: Record<string, number>; cotizacion_ganadora_id: number | null; justificacion_seleccion: string | null }> {
-    return this.http.post<{ adjudicacion_items: Record<string, number>; cotizacion_ganadora_id: number | null; justificacion_seleccion: string | null }>(
+  ): Observable<AdjudicacionResultado> {
+    return this.http.post<AdjudicacionResultado>(
       `${this.baseUrl}/solicitudes/${solicitudId}/adjudicar`,
       { adjudicacion, justificacion: justificacion ?? null },
+    );
+  }
+
+  cancelarOportunidad(solicitudId: number, motivo: string): Observable<CancelacionResultado> {
+    return this.http.post<CancelacionResultado>(
+      `${this.baseUrl}/solicitudes/${solicitudId}/cancelar`,
+      { motivo },
+    );
+  }
+
+  reabrirOportunidad(solicitudId: number): Observable<{ estado: string }> {
+    return this.http.post<{ estado: string }>(
+      `${this.baseUrl}/solicitudes/${solicitudId}/reabrir`,
+      {},
     );
   }
 

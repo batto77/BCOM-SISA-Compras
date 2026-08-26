@@ -115,8 +115,15 @@
             cellTemplate="estadoTpl"
           ></dxi-column>
           <div *dxTemplate="let c of 'estadoTpl'">
-            <span class="badge" [ngClass]="getEstadoBadgeClass(c.data.estado)">
-              {{ c.data.estado }}
+            <span
+              class="badge"
+              [ngClass]="getEstadoClase(c.data)"
+              [title]="getEstadoAyuda(c.data)"
+            >
+              @if (c.data.adjudicada) {
+                <i class="fas fa-trophy mr-1"></i>
+              }
+              {{ getEstadoTexto(c.data) }}
             </span>
           </div>
 

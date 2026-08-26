@@ -34,6 +34,10 @@ export class ComparativoComponent implements OnInit {
   // Adjudicación por ítem editada por el usuario: { item_solicitud_id: cotizacion_id | null }
   adjudicacion: Record<number, number | null> = {};
 
+  /** Adjudicación tal como quedó guardada en el servidor, para saber si hay cambios sin guardar. */
+  private adjudicacionGuardada: Record<number, number | null> = {};
+  estadoOportunidad = '';
+
   get solicitud() { return this.datos?.solicitud ?? null; }
   get itemsSolicitud() { return this.datos?.items_solicitud ?? []; }
   get evaluacion(): EvaluacionComparativo | null { return this.datos?.evaluacion ?? null; }
@@ -76,11 +80,14 @@ export class ComparativoComponent implements OnInit {
         // Adjudicación guardada; si no hay, se parte de la sugerida
         const guardada = data?.adjudicacion_items ?? {};
         this.adjudicacion = {};
+        this.adjudicacionGuardada = {};
         for (const item of this.itemsSolicitud) {
           const g = guardada[String(item.id)];
           const sug = this.evaluacion?.adjudicacion_sugerida?.[String(item.id)] ?? null;
           this.adjudicacion[item.id] = g != null ? g : (sug ?? null);
+          this.adjudicacionGuardada[item.id] = g ?? null;
         }
+        this.estadoOportunidad = data?.solicitud?.estado ?? '';
         this.cargando = false;
       },
       error: () => {
@@ -158,6 +165,60 @@ export class ComparativoComponent implements OnInit {
     return this.itemsSolicitud.length - this.itemsAdjudicados;
   }
 
+  /** Ítems efectivamente adjudicados según lo último guardado en el servidor. */
+  get itemsAdjudicadosGuardados(): number {
+    return this.itemsSolicitud.filter(i => this.adjudicacionGuardada[i.id] != null).length;
+  }
+
+  /** true si lo que se ve en pantalla difiere de lo guardado (incluye la sugerencia precargada). */
+  get hayCambiosSinGuardar(): boolean {
+    return this.itemsSolicitud.some(
+      i => (this.adjudicacion[i.id] ?? null) !== (this.adjudicacionGuardada[i.id] ?? null),
+    );
+  }
+
+  /** Estado visual del comparativo: qué tan avanzada está la adjudicación. */
+  get estadoAdjudicacion(): 'cancelada' | 'sin_guardar' | 'sin_adjudicar' | 'parcial' | 'completa' {
+    if (this.estadoOportunidad === 'cancelada') return 'cancelada';
+    if (this.hayCambiosSinGuardar) return 'sin_guardar';
+    const guardados = this.itemsAdjudicadosGuardados;
+    if (guardados === 0) return 'sin_adjudicar';
+    return guardados === this.itemsSolicitud.length ? 'completa' : 'parcial';
+  }
+
+  get estadoAdjudicacionTexto(): string {
+    const total = this.itemsSolicitud.length;
+    switch (this.estadoAdjudicacion) {
+      case 'cancelada': return 'Oportunidad cancelada';
+      case 'sin_guardar': return 'Cambios sin guardar';
+      case 'sin_adjudicar': return 'Sin adjudicar';
+      case 'parcial': return `Adjudicación parcial — ${this.itemsAdjudicadosGuardados} de ${total} ítems`;
+      case 'completa': return `Adjudicada — ${total} de ${total} ítems`;
+    }
+  }
+
+  get estadoAdjudicacionClase(): string {
+    const clases: Record<string, string> = {
+      cancelada: 'alert-dark',
+      sin_guardar: 'alert-warning',
+      sin_adjudicar: 'alert-secondary',
+      parcial: 'alert-info',
+      completa: 'alert-success',
+    };
+    return clases[this.estadoAdjudicacion] ?? 'alert-secondary';
+  }
+
+  get estadoAdjudicacionIcono(): string {
+    const iconos: Record<string, string> = {
+      cancelada: 'fa-ban',
+      sin_guardar: 'fa-pen',
+      sin_adjudicar: 'fa-hourglass-start',
+      parcial: 'fa-adjust',
+      completa: 'fa-check-circle',
+    };
+    return iconos[this.estadoAdjudicacion] ?? 'fa-info-circle';
+  }
+
   get monedaOportunidad(): string {
     return this.evaluacion?.moneda_oportunidad ?? 'COP';
   }
@@ -205,10 +266,18 @@ export class ComparativoComponent implements OnInit {
     this.cotizacionesService
       .adjudicar(this.solicitudId, this.adjudicacion, this.justificacion || undefined)
       .subscribe({
-        next: () => {
+        next: res => {
           this.guardando = false;
-          this.exito = 'Adjudicación guardada correctamente.';
-          setTimeout(() => (this.exito = ''), 4000);
+          // Lo guardado pasa a ser la nueva referencia, y el estado lo dicta el backend.
+          this.adjudicacionGuardada = {};
+          for (const item of this.itemsSolicitud) {
+            this.adjudicacionGuardada[item.id] = this.adjudicacion[item.id] ?? null;
+          }
+          if (res?.estado) this.estadoOportunidad = res.estado;
+          this.exito = res?.adjudicacion_completa
+            ? 'Adjudicación guardada. La oportunidad quedó adjudicada.'
+            : 'Adjudicación guardada (parcial): quedan ítems sin adjudicar.';
+          setTimeout(() => (this.exito = ''), 5000);
         },
         error: () => {
           this.error = 'No se pudo guardar la adjudicación.';

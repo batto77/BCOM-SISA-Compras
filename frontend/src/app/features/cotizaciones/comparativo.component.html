@@ -56,6 +56,20 @@
         </div>
       } @else {
 
+        <!-- Estado de la adjudicación: en qué punto está el comparativo -->
+        <div class="alert d-flex align-items-center mb-3" [ngClass]="estadoAdjudicacionClase">
+          <i class="fas mr-2" [ngClass]="estadoAdjudicacionIcono"></i>
+          <div class="flex-grow-1">
+            <strong>{{ estadoAdjudicacionTexto }}</strong>
+            @if (estadoAdjudicacion === 'sin_guardar') {
+              <span class="ml-1">— guardá para dejar registrado el estado de la oportunidad.</span>
+            }
+            @if (estadoAdjudicacion === 'cancelada' && solicitud.motivo_cancelacion) {
+              <div class="small mt-1">Motivo: {{ solicitud.motivo_cancelacion }}</div>
+            }
+          </div>
+        </div>
+
         <!-- ===== Adjudicación por ítem ===== -->
         <div class="card card-primary card-outline mb-3">
           <div class="card-header d-flex align-items-center">
@@ -116,6 +130,13 @@
                             </div>
                             <div class="small text-muted mt-1">
                               {{ getCandidato(item.id, cot.id)?.tiempo_entrega_dias ?? '—' }} días ·
+                              @if (getCandidato(item.id, cot.id)?.garantia_meses) {
+                                <span title="Meses de garantía">
+                                  <i class="fas fa-shield-alt"></i> {{ getCandidato(item.id, cot.id)?.garantia_meses }}m ·
+                                </span>
+                              } @else {
+                                <span class="text-muted" title="Sin garantía informada">sin gar. ·</span>
+                              }
                               pje {{ getCandidato(item.id, cot.id)?.puntaje | number:'1.0-0' }}
                             </div>
                             @if (esAdjudicado(item.id, cot.id)) {

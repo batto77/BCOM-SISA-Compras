@@ -60,6 +60,26 @@ export class CotizacionesComponent implements OnInit {
     return clases[estado] ?? 'badge-secondary';
   }
 
+  /**
+   * Estado mostrado en la grilla. La adjudicación no vive en la cotización sino
+   * en la oportunidad, así que se antepone cuando corresponde: saber que una
+   * cotización ganó importa más que saber que fue respondida.
+   */
+  getEstadoTexto(cot: CotizacionOut): string {
+    return cot.adjudicada ? 'adjudicada' : cot.estado;
+  }
+
+  getEstadoClase(cot: CotizacionOut): string {
+    return cot.adjudicada ? 'badge-primary' : this.getEstadoBadgeClass(cot.estado);
+  }
+
+  getEstadoAyuda(cot: CotizacionOut): string {
+    if (cot.adjudicada) {
+      return `Se le adjudicaron ${cot.items_adjudicados} ítem(s) de esta oportunidad`;
+    }
+    return '';
+  }
+
   enviarRecordatorio(cotizacionId: number): void {
     if (this.enviandoRecordatorio[cotizacionId]) return;
     this.enviandoRecordatorio[cotizacionId] = true;

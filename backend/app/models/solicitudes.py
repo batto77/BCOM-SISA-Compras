@@ -104,14 +104,21 @@ class SolicitudCompra(Base):
     )
     fecha_requerida: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     prioridad: Mapped[str] = mapped_column(
-        String(20), default="normal", nullable=False
-    )  # urgente/alta/normal/baja
+        String(20), default="medio", nullable=False
+    )  # critico/alto/medio/bajo — según el impacto en la operación
+    # (valores anteriores urgente/alta/normal/baja migrados en main.py)
     moneda: Mapped[str] = mapped_column(
         String(3), default="COP", nullable=False
     )  # COP, USD, EUR, etc.
     estado: Mapped[str] = mapped_column(
         String(30), default="borrador", nullable=False
-    )  # borrador/enviada/en_cotizacion/aprobada/rechazada
+    )  # borrador/enviada/en_cotizacion/adjudicada/rechazada/cancelada
+    # ('aprobada' quedó obsoleto: el cierre del flujo ahora es 'adjudicada'.
+    #  Se conserva en registros históricos y se sigue mostrando en la UI.)
+    # Motivo obligatorio al cancelar la oportunidad.
+    motivo_cancelacion: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    fecha_cancelacion: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    fecha_adjudicacion: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     version_actual: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     notas: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     campos_extra: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)  # {campo_id: valor}

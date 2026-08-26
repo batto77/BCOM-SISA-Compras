@@ -18,6 +18,14 @@ export interface ProductoFiltros {
   search?: string;
 }
 
+/**
+ * Las grillas de catálogo y las tablas paramétricas muestran el listado completo
+ * (no tienen paginación en la UI), pero el backend responde con limit=20 por defecto.
+ * Sin este límite explícito, a partir del ítem 21 los registros se crean bien pero
+ * quedan invisibles en pantalla.
+ */
+const LIMITE_LISTADO_COMPLETO = '500';
+
 @Injectable({ providedIn: 'root' })
 export class CatalogosService extends ApiService {
 
@@ -26,7 +34,8 @@ export class CatalogosService extends ApiService {
   }
 
   getCategorias(): Observable<CategoriaProducto[]> {
-    return this.http.get<{items: CategoriaProducto[]}>(`${this.baseUrl}/categorias-producto`).pipe(
+    const params = new HttpParams().set('limit', LIMITE_LISTADO_COMPLETO);
+    return this.http.get<{items: CategoriaProducto[]}>(`${this.baseUrl}/categorias-producto`, { params }).pipe(
       map(r => r.items), catchError(() => of([])));
   }
 
@@ -74,7 +83,7 @@ export class CatalogosService extends ApiService {
   }
 
   getProductos(filtros?: ProductoFiltros): Observable<Producto[]> {
-    let params = new HttpParams();
+    let params = new HttpParams().set('limit', LIMITE_LISTADO_COMPLETO);
     if (filtros?.categoria_id) params = params.set('categoria_id', String(filtros.categoria_id));
     if (filtros?.modo_defecto) params = params.set('modo_defecto', filtros.modo_defecto);
     if (filtros?.etiqueta_id) params = params.set('etiqueta_id', String(filtros.etiqueta_id));
@@ -99,12 +108,14 @@ export class CatalogosService extends ApiService {
   }
 
   getCategoriasServicio(): Observable<CategoriaServicio[]> {
-    return this.http.get<{items: CategoriaServicio[]}>(`${this.baseUrl}/categorias-servicio`).pipe(
+    const params = new HttpParams().set('limit', LIMITE_LISTADO_COMPLETO);
+    return this.http.get<{items: CategoriaServicio[]}>(`${this.baseUrl}/categorias-servicio`, { params }).pipe(
       map(r => r.items), catchError(() => of([])));
   }
 
   getServicios(): Observable<Servicio[]> {
-    return this.http.get<{items: Servicio[]}>(`${this.baseUrl}/servicios`).pipe(
+    const params = new HttpParams().set('limit', LIMITE_LISTADO_COMPLETO);
+    return this.http.get<{items: Servicio[]}>(`${this.baseUrl}/servicios`, { params }).pipe(
       map(r => r.items), catchError(() => of([])));
   }
 
